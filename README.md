@@ -1,2 +1,1 @@
-"# arabic-text-diacritization" 
-"# arabic-text-diacritization" 
+# Arabic Text Diacritization
