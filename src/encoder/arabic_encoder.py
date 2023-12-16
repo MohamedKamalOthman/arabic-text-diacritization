@@ -1,6 +1,6 @@
 import re
 
-from vocab import CHARACTERS, DIACRITICS
+from encoder.vocab import CHARACTERS, DIACRITICS
 
 
 class ArabicEncoder:
@@ -13,6 +13,7 @@ class ArabicEncoder:
         self.start = "s"
         self.vocab = vocab
         self.diacritics = diacritics + [self.start]
+        self.diacritics_set = set(diacritics)
         # create dicionary mapping each character to its index and vice versa
         self.char2idx = {char: idx for idx, char in enumerate(self.vocab)}
         self.idx2char = {idx: char for idx, char in enumerate(self.vocab)}
@@ -20,10 +21,10 @@ class ArabicEncoder:
         self.diac2idx = {diac: idx for idx, diac in enumerate(self.diacritics)}
         self.idx2diac = {idx: diac for idx, diac in enumerate(self.diacritics)}
 
-    def input_to_vector(self, input: str) -> list[str]:
-        return [self.char2idx[s] for s in input if s != self.padding]
+    def chars_to_vector(self, chars: list[str]) -> list[str]:
+        return [self.char2idx[s] for s in chars if s != self.padding]
 
-    def diac_to_vector(self, diac: str) -> list[str]:
+    def diac_to_vector(self, diac: list[str]) -> list[str]:
         return [self.diac2idx[s] for s in diac if s != self.padding]
 
     def clean(self, text: str):
@@ -35,9 +36,9 @@ class ArabicEncoder:
         reverse_diacritic = "".join(reversed(diacritics))
         normal_diacritic = "".join(diacritics)
         # check both normal and reverse diacritics
-        if normal_diacritic in DIACRITICS:
+        if normal_diacritic in self.diacritics_set:
             return normal_diacritic
-        if reverse_diacritic in DIACRITICS:
+        if reverse_diacritic in self.diacritics_set:
             return reverse_diacritic
         raise ValueError(f"{diacritics} list not known diacritic")
 
@@ -46,16 +47,23 @@ class ArabicEncoder:
         diacritics = []
         chars = []
         for char in text:
-            if char in DIACRITICS:
+            if char in self.diacritics_set:
                 current_diacritics.append(char)
             else:
                 diacritics.append(self.normalize_diacritic(current_diacritics))
                 chars.append(char)
                 current_diacritics = []
 
-        if len(diacritics):
-            del diacritics[0]
+        if len(diacritics) > 0:
+            diacritics.pop(0)
 
         diacritics.append(self.normalize_diacritic(current_diacritics))
 
         return text, chars, diacritics
+
+
+encoder = ArabicEncoder()
+data = "وَحَيَوَانٌ غَيْرُ مَوْجُودٍ ."
+text, chars, diacritics = encoder.extract_diacritics(data)
+
+print(encoder.diac_to_vector(diacritics))
