@@ -21,6 +21,8 @@ class ArabicEncoder:
         self.diac2idx = {diac: idx for idx, diac in enumerate(self.diacritics)}
         self.idx2diac = {idx: diac for idx, diac in enumerate(self.diacritics)}
 
+        self.start_token_id = self.char2idx[self.start]
+
     def chars_to_vector(self, chars: list[str]) -> list[str]:
         return [self.char2idx[s] for s in chars if s != self.padding]
 

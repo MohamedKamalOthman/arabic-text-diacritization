@@ -5,9 +5,9 @@ from encoder.arabic_encoder import ArabicEncoder
 
 
 class DiacritizerDataset(Dataset):
-    def __init__(self, data):
+    def __init__(self, data, encoder: ArabicEncoder):
         self.data = data
-        self.encoder = ArabicEncoder()
+        self.encoder = encoder
 
     def __len__(self):
         return len(self.data)
