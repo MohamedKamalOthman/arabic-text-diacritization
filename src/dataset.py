@@ -38,7 +38,7 @@ def collate_fn(samples):
     batch = {
         "char_seq": padded_char_seq,
         "diac_seq": padded_diac_seq,
-        "seq_lengths": seq_lengths,
+        "seq_lengths": torch.LongTensor(seq_lengths),
         "text": text,
     }
     return batch

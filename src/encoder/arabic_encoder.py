@@ -15,13 +15,18 @@ class ArabicEncoder:
         self.diacritics = diacritics + [self.start]
         self.diacritics_set = set(diacritics)
         # create dicionary mapping each character to its index and vice versa
-        self.char2idx = {char: idx for idx, char in enumerate(self.vocab)}
-        self.idx2char = {idx: char for idx, char in enumerate(self.vocab)}
+        self.char2idx = {
+            char: idx for idx, char in enumerate(self.vocab + [self.padding])
+        }
+        self.idx2char = {
+            idx: char for idx, char in enumerate(self.vocab + [self.padding])
+        }
         # create dicionary mapping each diacritic to its index and vice versa
         self.diac2idx = {diac: idx for idx, diac in enumerate(self.diacritics)}
         self.idx2diac = {idx: diac for idx, diac in enumerate(self.diacritics)}
 
-        self.start_token_id = self.char2idx[self.start]
+        self.start_token_id = self.diac2idx[self.start]
+        self.padding_token_id = self.char2idx[self.padding]
 
     def chars_to_vector(self, chars: list[str]) -> list[str]:
         return [self.char2idx[s] for s in chars if s != self.padding]
@@ -62,10 +67,3 @@ class ArabicEncoder:
         diacritics.append(self.normalize_diacritic(current_diacritics))
 
         return text, chars, diacritics
-
-
-encoder = ArabicEncoder()
-data = "وَحَيَوَانٌ غَيْرُ مَوْجُودٍ ."
-text, chars, diacritics = encoder.extract_diacritics(data)
-
-print(encoder.diac_to_vector(diacritics))

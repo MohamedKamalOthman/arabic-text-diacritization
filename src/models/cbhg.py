@@ -16,7 +16,7 @@ class CBHGModel(nn.Module):
         cbhg_num_filters: int = 16,
         cbhg_proj_dims: list[int] = [128, 256],
         cbhg_num_highway_layers: int = 4,
-        cbhg_gru_hidden_dim: int = 256,
+        cbhg_gru_hidden_size: int = 256,
         lstm_hidden_dims: list[int] = [256, 256],
         use_batch_norm_post_lstm: bool = True,
     ):
@@ -42,7 +42,7 @@ class CBHGModel(nn.Module):
         # CBHG
         self.cbhg = CBHGModule(
             in_dim=embedding_dim if not self.use_prenet else prenet_dims[-1],
-            out_dim=cbhg_gru_hidden_dim,
+            out_dim=cbhg_gru_hidden_size,
             K=cbhg_num_filters,
             proj_dims=cbhg_proj_dims,
             num_highway_layers=cbhg_num_highway_layers,
@@ -50,7 +50,7 @@ class CBHGModel(nn.Module):
 
         # post CBHG LSTM
         self.LSTM = nn.LSTM(
-            input_size=cbhg_gru_hidden_dim * 2,
+            input_size=cbhg_gru_hidden_size * 2,
             hidden_size=lstm_hidden_dims[0],
             num_layers=1,
             bidirectional=True,
@@ -69,7 +69,7 @@ class CBHGModel(nn.Module):
             self.batch_norm = nn.BatchNorm1d(lstm_hidden_dims[-1] * 2)
 
         # output projection
-        self.linear = nn.Linear(lstm_hidden_dims[-1] * 2, out_vocab_size)
+        self.linear = nn.Linear(lstm_hidden_dims[1] * 2, out_vocab_size)
 
     def forward(self, x, lengths=None):
         # x: (batch_size, seq_len)

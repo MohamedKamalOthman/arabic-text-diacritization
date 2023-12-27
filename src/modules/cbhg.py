@@ -43,7 +43,6 @@ class CBHGModule(nn.Module):
 
         # projection
         in_channels = K * in_dim
-        print(in_channels)
         self.conv1d_proj1 = BatchNormConv1d(
             in_channels=in_channels,
             out_channels=proj_dims[0],
