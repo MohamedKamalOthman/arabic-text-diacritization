@@ -23,12 +23,6 @@ def batch_accuracy(output, gold, pad_index, device="cuda"):
     )
 
 
-def _repeated_batches(dataloader: DataLoader):
-    while True:
-        for batch in dataloader:
-            yield batch
-
-
 class Trainer:
     def __init__(self):
         if torch.cuda.is_available():
@@ -121,7 +115,8 @@ class Trainer:
             "checkpoints",
         )
         if not os.path.exists(full_dir_path):
-            raise ValueError(f"Path {full_dir_path} does not exist")
+            print("WARNING: No checkpoints found, starting from scratch")
+            return
 
         # get latest checkpoint
         if epoch == -1:
@@ -138,6 +133,57 @@ class Trainer:
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.step = checkpoint["step"]
         self.epoch = checkpoint["epoch"]
+
+    def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        raise NotImplementedError("training_step is not implemented in base Trainer")
+
+    def train(self):
+        total_steps = CONFIG["epochs"] * len(self.train_iterator)
+        training_tqdm = tqdm(
+            iterable=range(total_steps),
+            total=total_steps,
+            leave=True,
+            initial=self.step,
+            desc="Training: ",
+        )
+        for epoch in range(self.epoch, CONFIG["epochs"]):
+            self.epoch = epoch + 1
+            for batch in self.train_iterator:
+                if False and CONFIG["use_decay"]:
+                    # TODO: implement learning rate decay
+                    pass
+
+                self.optimizer.zero_grad()
+                result = self.training_step(batch)
+                # get training loss
+                loss = result["loss"]
+                # get training batch accuracy
+                acc = batch_accuracy(
+                    result["pred"], result["gold"], self.encoder.padding_token_id
+                ).item()
+                loss.backward()
+                # TODO: implement gradient clipping
+                self.optimizer.step()
+
+                self.step += 1
+
+                # update tqdm
+                training_tqdm.set_description_str(
+                    f"Training: loss: {loss:.8f}, accuracy: {acc:.8f}, epoch: {self.epoch}"
+                )
+                training_tqdm.update()
+
+            # save model
+            if self.step % CONFIG["save_every"] == 0:
+                self.save()
+
+            # evaluate
+            if self.step % CONFIG["eval_every"] == 0:
+                self.evaluate()
+
+        # final evaluation
+        self.evaluate()
+        training_tqdm.close()
 
     def evaluate(self):
         eval_tqdm = tqdm(
@@ -215,54 +261,6 @@ class RNNTrainer(Trainer):
     def save(self):
         super(RNNTrainer, self).save("rnn")
 
-    def train(self):
-        total_steps = CONFIG["epochs"] * len(self.train_iterator)
-        training_tqdm = tqdm(
-            iterable=range(total_steps),
-            total=total_steps,
-            leave=True,
-            initial=self.step,
-            desc="Training: ",
-        )
-        for epoch in range(self.epoch, CONFIG["epochs"]):
-            self.epoch = epoch + 1
-            for batch in self.train_iterator:
-                if False and CONFIG["use_decay"]:
-                    # TODO: implement learning rate decay
-                    pass
-
-                self.optimizer.zero_grad()
-                result = self.training_step(batch)
-                # get training loss
-                loss = result["loss"]
-                # get training batch accuracy
-                acc = batch_accuracy(
-                    result["pred"], result["gold"], self.encoder.padding_token_id
-                ).item()
-                loss.backward()
-                # TODO: implement gradient clipping
-                self.optimizer.step()
-
-                self.step += 1
-
-                # update tqdm
-                training_tqdm.set_description_str(
-                    f"Training: loss: {loss:.8f}, accuracy: {acc:.8f}, epoch: {self.epoch}"
-                )
-                training_tqdm.update()
-
-            # save model
-            if self.step % CONFIG["save_every"] == 0:
-                self.save()
-
-            # evaluate
-            if self.step % CONFIG["eval_every"] == 0:
-                self.evaluate()
-
-        # final evaluation
-        self.evaluate()
-        training_tqdm.close()
-
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)
         diac_seq = batch["diac_seq"].to(self.device)
@@ -303,39 +301,18 @@ class CBHGTrainer(Trainer):
             weight_decay=CONFIG["weight_decay"],
         )
 
-    def train(self):
+        # Load model if specified
         if CONFIG["load_model"]:
-            self.load("cbhg")
-        training_tqdm = tqdm(
-            iterable=self.train_iterator,
-            total=CONFIG["total_steps"],
-            leave=True,
-            initial=self.step,
-            desc="Training: ",
-        )
-        for batch in _repeated_batches(self.train_iterator):
-            if False and CONFIG["use_decay"]:
-                # TODO: implement learning rate decay
-                pass
+            self.load()
 
-            self.optimizer.zero_grad()
-            result = self.training_step(batch)
-            loss = result["loss"]
-            training_tqdm.display(f"loss: {loss}", pos=3)
-            loss.backward()
-            # TODO: implement gradient clipping
-            self.optimizer.step()
+    def log(self, name: str, log_string: str):
+        super(CBHGTrainer, self).log(name=name, log_string=log_string, path="cbhg")
 
-            self.step += 1
-            if self.step > CONFIG["total_steps"]:
-                self.evaluate()
-                return
+    def load(self):
+        super(CBHGTrainer, self).load("cbhg")
 
-            training_tqdm.update()
-
-            # save model
-            if self.step % CONFIG["save_every"] == 0:
-                self.save("cbhg")
+    def save(self):
+        super(CBHGTrainer, self).save("cbhg")
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)
