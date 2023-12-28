@@ -8,7 +8,7 @@ CONFIG = {
     "num_workers": 2,
     # Log params
     "log_base_path": "logs",
-    "save_every": 10,  # save every x steps
+    "save_every": 1,  # save every x epochs
     "load_model": True,
     # model params
     "embedding_dim": 128,
@@ -23,9 +23,9 @@ CONFIG = {
     "prenet_dims": (128, 64),
     "prenet_dropout": 0.5,
     # training params
-    "total_steps": 1_000,
     "batch_size": 32,
-    "epochs": 50_000,
+    "epochs": 3,
+    "eval_every": 1,  # eval every x epochs
     "learning_rate": 0.001,
     "adam_betas": (0.9, 0.999),
     "weight_decay": 1e-6,

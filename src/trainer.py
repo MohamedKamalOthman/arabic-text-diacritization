@@ -1,11 +1,11 @@
-import os
 import json
+import os
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from tqdm import trange
+from tqdm import tqdm
 
 from config import CONFIG
 from dataset import DiacritizerDataset, get_dataloader
@@ -43,6 +43,7 @@ class Trainer:
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.encoder.padding_token_id)
         self.scaler = torch.cuda.amp.GradScaler()
 
+        self.epoch = 0
         self.step = 0
 
         training_data = open(
@@ -72,6 +73,14 @@ class Trainer:
         self.model: nn.Module | None = None
         self.optimizer: optim.Optimizer | None = None
 
+    def log(self, name: str, log_string: str, path: str = "cbhg"):
+        full_dir_path = os.path.join(CONFIG["log_base_path"], path)
+        # create directory if not exists
+        os.makedirs(full_dir_path, exist_ok=True)
+        # write to log
+        with open(os.path.join(full_dir_path, name + ".log"), "a") as file:
+            file.write(log_string + "\n")
+
     def save(self, path: str = "cbhg"):
         if self.model is None:
             raise ValueError("Model is not initialized")
@@ -87,11 +96,12 @@ class Trainer:
         # save model
         torch.save(
             {
+                "epoch": self.epoch,
                 "step": self.step,
                 "model_state_dict": self.model.state_dict(),
                 "optimizer_state_dict": self.optimizer.state_dict(),
             },
-            os.path.join(full_dir_path, f"{self.step}-snapshot.pt"),
+            os.path.join(full_dir_path, f"{self.epoch}-snapshot.pt"),
         )
         # write config
         with open(
@@ -99,7 +109,7 @@ class Trainer:
         ) as file:
             file.write(json.dumps(CONFIG, indent=4))
 
-    def load(self, path: str = "cbhg", step: int = -1):
+    def load(self, path: str = "cbhg", epoch: int = -1):
         if self.model is None:
             raise ValueError("Model is not initialized")
         if self.optimizer is None:
@@ -114,23 +124,28 @@ class Trainer:
             raise ValueError(f"Path {full_dir_path} does not exist")
 
         # get latest checkpoint
-        if step == -1:
+        if epoch == -1:
             checkpoints = os.listdir(full_dir_path)
             checkpoints = [int(checkpoint.split("-")[0]) for checkpoint in checkpoints]
             checkpoints.sort()
-            step = checkpoints[-1]
-        else:
-            # load specific checkpoint
-            step = step
+            epoch = checkpoints[-1]
+
         checkpoint = torch.load(
-            os.path.join(full_dir_path, f"{step}-snapshot.pt"), map_location=self.device
+            os.path.join(full_dir_path, f"{epoch}-snapshot.pt"),
+            map_location=self.device,
         )
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.step = checkpoint["step"]
+        self.epoch = checkpoint["epoch"]
 
     def evaluate(self):
-        eval_tqdm = trange(self.step, len(self.eval_iterator), leave=True)
+        eval_tqdm = tqdm(
+            iterable=self.eval_iterator,
+            total=len(self.eval_iterator),
+            leave=True,
+            desc="Evaluate: ",
+        )
         epoch_loss = 0
         epoch_acc = 0
         self.model.eval()
@@ -156,16 +171,23 @@ class Trainer:
                 epoch_acc += acc.item()
                 eval_tqdm.update()
 
-        eval_tqdm.display(
-            f"Evaluate: accuracy, {epoch_acc / len(self.eval_iterator)}, loss: {epoch_loss / len(self.eval_iterator)}",
-            pos=4,
+        eval_tqdm.set_description(
+            f"Evaluate: loss: {epoch_loss/len(self.eval_iterator)}, accuracy: {epoch_acc/len(self.eval_iterator)}"
         )
+        # save to log
+        self.log(
+            name="eval",
+            log_string=f"Epoch: {self.epoch}, Accuracy: {epoch_acc/len(self.eval_iterator)}, Loss: {epoch_loss/len(self.eval_iterator)}",
+        )
+
         self.model.train()
+        eval_tqdm.close()
 
 
 class RNNTrainer(Trainer):
     def __init__(self):
         super(RNNTrainer, self).__init__()
+
         self.model = RNNModel(
             in_vocab_size=len(self.encoder.vocab),
             out_vocab_size=len(self.encoder.diacritics),
@@ -180,33 +202,66 @@ class RNNTrainer(Trainer):
             weight_decay=CONFIG["weight_decay"],
         )
 
-    def train(self):
+        # Load model if specified
         if CONFIG["load_model"]:
-            self.load("rnn")
-        training_tqdm = trange(self.step, CONFIG["total_steps"], leave=True)
-        for batch in _repeated_batches(self.train_iterator):
-            if False and CONFIG["use_decay"]:
-                # TODO: implement learning rate decay
-                pass
+            self.load()
 
-            self.optimizer.zero_grad()
-            result = self.training_step(batch)
-            loss = result["loss"]
-            training_tqdm.display(f"loss: {loss}", pos=3)
-            loss.backward()
-            # TODO: implement gradient clipping
-            self.optimizer.step()
+    def log(self, name: str, log_string: str):
+        super(RNNTrainer, self).log(name=name, log_string=log_string, path="rnn")
 
-            self.step += 1
-            if self.step > CONFIG["total_steps"]:
-                self.evaluate()
-                return
+    def load(self):
+        super(RNNTrainer, self).load("rnn")
 
-            training_tqdm.update()
+    def save(self):
+        super(RNNTrainer, self).save("rnn")
+
+    def train(self):
+        total_steps = CONFIG["epochs"] * len(self.train_iterator)
+        training_tqdm = tqdm(
+            iterable=range(total_steps),
+            total=total_steps,
+            leave=True,
+            initial=self.step,
+            desc="Training: ",
+        )
+        for epoch in range(self.epoch, CONFIG["epochs"]):
+            self.epoch = epoch + 1
+            for batch in self.train_iterator:
+                if False and CONFIG["use_decay"]:
+                    # TODO: implement learning rate decay
+                    pass
+
+                self.optimizer.zero_grad()
+                result = self.training_step(batch)
+                # get training loss
+                loss = result["loss"]
+                # get training batch accuracy
+                acc = batch_accuracy(
+                    result["pred"], result["gold"], self.encoder.padding_token_id
+                ).item()
+                loss.backward()
+                # TODO: implement gradient clipping
+                self.optimizer.step()
+
+                self.step += 1
+
+                # update tqdm
+                training_tqdm.set_description_str(
+                    f"Training: loss: {loss:.8f}, accuracy: {acc:.8f}, epoch: {self.epoch}"
+                )
+                training_tqdm.update()
 
             # save model
             if self.step % CONFIG["save_every"] == 0:
-                self.save("rnn")
+                self.save()
+
+            # evaluate
+            if self.step % CONFIG["eval_every"] == 0:
+                self.evaluate()
+
+        # final evaluation
+        self.evaluate()
+        training_tqdm.close()
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)
@@ -220,7 +275,7 @@ class RNNTrainer(Trainer):
 
         # calculate loss
         loss = self.criterion(pred, gold)
-        return {"loss": loss, "pred": pred}
+        return {"loss": loss, "pred": pred, "gold": gold}
 
 
 class CBHGTrainer(Trainer):
@@ -251,7 +306,13 @@ class CBHGTrainer(Trainer):
     def train(self):
         if CONFIG["load_model"]:
             self.load("cbhg")
-        training_tqdm = trange(self.step, CONFIG["total_steps"], leave=True)
+        training_tqdm = tqdm(
+            iterable=self.train_iterator,
+            total=CONFIG["total_steps"],
+            leave=True,
+            initial=self.step,
+            desc="Training: ",
+        )
         for batch in _repeated_batches(self.train_iterator):
             if False and CONFIG["use_decay"]:
                 # TODO: implement learning rate decay
@@ -293,53 +354,4 @@ class CBHGTrainer(Trainer):
 
         # calculate loss
         loss = self.criterion(pred.to(self.device), gold.to(self.device))
-        return {"loss": loss, "pred": pred}
-
-    def evaluate_with_error_rates(self, iterator, tqdm):
-        all_orig = []
-        all_predicted = []
-        results = {}
-        self.diacritizer.set_model(self.model)
-        evaluated_batches = 0
-        tqdm.set_description(f"Calculating DER/WER {self.global_step}: ")
-        for batch in iterator:
-            if evaluated_batches > int(self.config["error_rates_n_batches"]):
-                break
-
-            predicted = self.diacritizer.diacritize_batch(batch)
-            all_predicted += predicted
-            all_orig += batch["original"]
-            tqdm.update()
-
-        summary_texts = []
-        orig_path = os.path.join(self.config_manager.prediction_dir, f"original.txt")
-        predicted_path = os.path.join(
-            self.config_manager.prediction_dir, f"predicted.txt"
-        )
-
-        with open(orig_path, "w", encoding="utf8") as file:
-            for sentence in all_orig:
-                file.write(f"{sentence}\n")
-
-        with open(predicted_path, "w", encoding="utf8") as file:
-            for sentence in all_predicted:
-                file.write(f"{sentence}\n")
-
-        for i in range(int(self.config["n_predicted_text_tensorboard"])):
-            if i > len(all_predicted):
-                break
-
-            summary_texts.append(
-                (f"eval-text/{i}", f"{ all_orig[i]} |->  {all_predicted[i]}")
-            )
-
-        results["DER"] = der.calculate_der_from_path(orig_path, predicted_path)
-        results["DER*"] = der.calculate_der_from_path(
-            orig_path, predicted_path, case_ending=False
-        )
-        results["WER"] = wer.calculate_wer_from_path(orig_path, predicted_path)
-        results["WER*"] = wer.calculate_wer_from_path(
-            orig_path, predicted_path, case_ending=False
-        )
-        tqdm.reset()
-        return results, summary_texts
+        return {"loss": loss, "pred": pred, "gold": gold}
