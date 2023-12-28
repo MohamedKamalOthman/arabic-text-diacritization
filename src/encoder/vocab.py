@@ -1,4 +1,11 @@
-CHARACTERS = [
+import inspect
+import pickle
+from pathlib import Path
+
+_CURRENT_DIR = Path(inspect.getfile(inspect.currentframe())).parent
+
+
+_characters_set = {
     " ",
     "-",
     ".",
@@ -6,58 +13,10 @@ CHARACTERS = [
     "،",
     "؛",
     "؟",
-    "ء",
-    "آ",
-    "أ",
-    "ؤ",
-    "إ",
-    "ئ",
-    "ا",
-    "ب",
-    "ة",
-    "ت",
-    "ث",
-    "ج",
-    "ح",
-    "خ",
-    "د",
-    "ذ",
-    "ر",
-    "ز",
-    "س",
-    "ش",
-    "ص",
-    "ض",
-    "ط",
-    "ظ",
-    "ع",
-    "غ",
-    "ف",
-    "ق",
-    "ك",
-    "ل",
-    "م",
-    "ن",
-    "ه",
-    "و",
-    "ى",
-    "ي",
-]
+} | pickle.load(open(_CURRENT_DIR / "arabic_letters.pickle", "rb"))
+CHARACTERS2ID = {char: idx for idx, char in enumerate(sorted(_characters_set))}
 
-DIACRITICS = [
-    "",
-    "ً",
-    "ٌ",
-    "ٍ",
-    "َ",
-    "ُ",
-    "ِ",
-    "ّ",
-    "ًّ",
-    "ٌّ",
-    "ٍّ",
-    "َّ",
-    "ُّ",
-    "ِّ",
-    "ْ",
-]
+
+DIACRITICS2ID: dict[str, str] = pickle.load(
+    open(_CURRENT_DIR / "diacritic2id.pickle", "rb")
+)

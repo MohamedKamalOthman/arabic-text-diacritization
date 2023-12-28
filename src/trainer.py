@@ -32,7 +32,7 @@ class Trainer:
             self.device = torch.device("cpu")
 
         self.encoder = ArabicEncoder()
-        self.start_token_id = self.encoder.start_token_id
+        # self.start_token_id = self.encoder.start_token_id
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.encoder.padding_token_id)
         self.scaler = torch.cuda.amp.GradScaler()
@@ -204,7 +204,7 @@ class Trainer:
                 pred = (
                     self.model(char_seq)
                     .contiguous()
-                    .view(-1, len(self.encoder.diacritics))
+                    .view(-1, self.encoder.out_vocab_size)
                 )
 
                 # get res
@@ -235,8 +235,8 @@ class RNNTrainer(Trainer):
         super(RNNTrainer, self).__init__()
 
         self.model = RNNModel(
-            in_vocab_size=len(self.encoder.vocab),
-            out_vocab_size=len(self.encoder.diacritics),
+            in_vocab_size=self.encoder.in_vocab_size,
+            out_vocab_size=self.encoder.out_vocab_size,
             embedding_dim=CONFIG["rnn_embedding_dim"],
             hidden_dim=CONFIG["rnn_hidden_dim"],
         ).to(self.device)
@@ -266,7 +266,7 @@ class RNNTrainer(Trainer):
         diac_seq = batch["diac_seq"].to(self.device)
         # seq_lengths = batch["seq_lengths"].to("cpu")
         # forward pass
-        pred = self.model(char_seq).contiguous().view(-1, len(self.encoder.diacritics))
+        pred = self.model(char_seq).contiguous().view(-1, self.encoder.out_vocab_size)
 
         # get res
         gold = diac_seq.contiguous().view(-1)
@@ -280,8 +280,8 @@ class CBHGTrainer(Trainer):
     def __init__(self):
         super(CBHGTrainer, self).__init__()
         self.model = CBHGModel(
-            in_vocab_size=len(self.encoder.vocab),
-            out_vocab_size=len(self.encoder.diacritics),
+            in_vocab_size=self.encoder.in_vocab_size,
+            out_vocab_size=self.encoder.out_vocab_size,
             embedding_dim=CONFIG["embedding_dim"],
             use_prenet=CONFIG["use_prenet"],
             prenet_dims=CONFIG["prenet_dims"],
@@ -323,7 +323,7 @@ class CBHGTrainer(Trainer):
         pred = (
             self.model(char_seq, seq_lengths)
             .contiguous()
-            .view(-1, len(self.encoder.diacritics))
+            .view(-1, self.encoder.out_vocab_size)
         )
 
         # backward pass
