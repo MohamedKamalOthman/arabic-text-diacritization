@@ -6,6 +6,10 @@ CONFIG = {
     "max_length": 500,
     # data loader params
     "num_workers": 2,
+    # Log params
+    "log_base_path": "logs",
+    "save_every": 10,  # save every x steps
+    "load_model": True,
     # model params
     "embedding_dim": 128,
     "prenet_dim": (128, 64),

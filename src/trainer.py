@@ -1,4 +1,5 @@
 import os
+import json
 
 import torch
 import torch.nn as nn
@@ -69,6 +70,64 @@ class Trainer:
         )
 
         self.model: nn.Module | None = None
+        self.optimizer: optim.Optimizer | None = None
+
+    def save(self, path: str = "cbhg"):
+        if self.model is None:
+            raise ValueError("Model is not initialized")
+        if self.optimizer is None:
+            raise ValueError("Optimizer is not initialized")
+        full_dir_path = os.path.join(
+            CONFIG["log_base_path"],
+            path,
+            "checkpoints",
+        )
+        # create directory if not exists
+        os.makedirs(full_dir_path, exist_ok=True)
+        # save model
+        torch.save(
+            {
+                "step": self.step,
+                "model_state_dict": self.model.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+            },
+            os.path.join(full_dir_path, f"{self.step}-snapshot.pt"),
+        )
+        # write config
+        with open(
+            os.path.join(CONFIG["log_base_path"], path, "config.json"), "w"
+        ) as file:
+            file.write(json.dumps(CONFIG, indent=4))
+
+    def load(self, path: str = "cbhg", step: int = -1):
+        if self.model is None:
+            raise ValueError("Model is not initialized")
+        if self.optimizer is None:
+            raise ValueError("Optimizer is not initialized")
+        # check if path exists
+        full_dir_path = os.path.join(
+            CONFIG["log_base_path"],
+            path,
+            "checkpoints",
+        )
+        if not os.path.exists(full_dir_path):
+            raise ValueError(f"Path {full_dir_path} does not exist")
+
+        # get latest checkpoint
+        if step == -1:
+            checkpoints = os.listdir(full_dir_path)
+            checkpoints = [int(checkpoint.split("-")[0]) for checkpoint in checkpoints]
+            checkpoints.sort()
+            step = checkpoints[-1]
+        else:
+            # load specific checkpoint
+            step = step
+        checkpoint = torch.load(
+            os.path.join(full_dir_path, f"{step}-snapshot.pt"), map_location=self.device
+        )
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.step = checkpoint["step"]
 
     def evaluate(self):
         eval_tqdm = trange(self.step, len(self.eval_iterator), leave=True)
@@ -122,7 +181,8 @@ class RNNTrainer(Trainer):
         )
 
     def train(self):
-        self.evaluate()
+        if CONFIG["load_model"]:
+            self.load("rnn")
         training_tqdm = trange(self.step, CONFIG["total_steps"], leave=True)
         for batch in _repeated_batches(self.train_iterator):
             if False and CONFIG["use_decay"]:
@@ -143,6 +203,10 @@ class RNNTrainer(Trainer):
                 return
 
             training_tqdm.update()
+
+            # save model
+            if self.step % CONFIG["save_every"] == 0:
+                self.save("rnn")
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)
@@ -185,7 +249,8 @@ class CBHGTrainer(Trainer):
         )
 
     def train(self):
-        self.evaluate()
+        if CONFIG["load_model"]:
+            self.load("cbhg")
         training_tqdm = trange(self.step, CONFIG["total_steps"], leave=True)
         for batch in _repeated_batches(self.train_iterator):
             if False and CONFIG["use_decay"]:
@@ -206,6 +271,10 @@ class CBHGTrainer(Trainer):
                 return
 
             training_tqdm.update()
+
+            # save model
+            if self.step % CONFIG["save_every"] == 0:
+                self.save("cbhg")
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)
