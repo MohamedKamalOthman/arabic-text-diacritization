@@ -75,8 +75,8 @@ class Trainer:
         epoch_loss = 0
         epoch_acc = 0
         self.model.eval()
-        for batch in self.eval_iterator:
-            with torch.no_grad():
+        with torch.no_grad():
+            for batch in self.eval_iterator:
                 char_seq = batch["char_seq"].to(self.device)
                 diac_seq = batch["diac_seq"].to(self.device)
 
