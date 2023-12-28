@@ -32,4 +32,6 @@ CONFIG = {
     # RNN Model
     "rnn_embedding_dim": 256,
     "rnn_hidden_dim": 128,
+    # inference params
+    "inference_batch_size": 1,
 }

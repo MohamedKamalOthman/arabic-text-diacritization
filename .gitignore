@@ -22,3 +22,6 @@ lib64/
 # Torch models
 *.pt
 logs/
+
+# inference
+output/

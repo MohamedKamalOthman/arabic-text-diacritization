@@ -4,23 +4,15 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from config import CONFIG
 from dataset import DiacritizerDataset, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
+from models.loader import load_model
 from models.rnn import RNNModel
-
-
-def batch_accuracy(output, gold, pad_index, device="cuda"):
-    predictions = output.argmax(dim=1, keepdim=True)
-    non_pad_elements = torch.nonzero((gold != pad_index))
-    correct = predictions[non_pad_elements].squeeze(1).eq(gold[non_pad_elements])
-    return correct.sum() / torch.FloatTensor([gold[non_pad_elements].shape[0]]).to(
-        device
-    )
+from utils import batch_accuracy
 
 
 class Trainer:
@@ -234,12 +226,7 @@ class RNNTrainer(Trainer):
     def __init__(self):
         super(RNNTrainer, self).__init__()
 
-        self.model = RNNModel(
-            in_vocab_size=self.encoder.in_vocab_size,
-            out_vocab_size=self.encoder.out_vocab_size,
-            embedding_dim=CONFIG["rnn_embedding_dim"],
-            hidden_dim=CONFIG["rnn_hidden_dim"],
-        ).to(self.device)
+        self.model: RNNModel = load_model("rnn", self.encoder).to(self.device)
 
         self.optimizer = optim.Adam(
             self.model.parameters(),
@@ -279,20 +266,7 @@ class RNNTrainer(Trainer):
 class CBHGTrainer(Trainer):
     def __init__(self):
         super(CBHGTrainer, self).__init__()
-        self.model = CBHGModel(
-            in_vocab_size=self.encoder.in_vocab_size,
-            out_vocab_size=self.encoder.out_vocab_size,
-            embedding_dim=CONFIG["embedding_dim"],
-            use_prenet=CONFIG["use_prenet"],
-            prenet_dims=CONFIG["prenet_dims"],
-            prenet_dropout=CONFIG["prenet_dropout"],
-            cbhg_num_filters=CONFIG["cbhg_num_filters"],
-            cbhg_proj_dims=CONFIG["cbhg_proj_dims"],
-            cbhg_num_highway_layers=CONFIG["cbhg_num_highway_layers"],
-            cbhg_gru_hidden_size=CONFIG["cbhg_gru_hidden_size"],
-            lstm_hidden_dims=CONFIG["lstm_hidden_dims"],
-            use_batch_norm_post_lstm=CONFIG["use_batch_norm_post_lstm"],
-        ).to(self.device)
+        self.model: CBHGModel = load_model("cbhg", self.encoder).to(self.device)
 
         self.optimizer = optim.Adam(
             self.model.parameters(),
