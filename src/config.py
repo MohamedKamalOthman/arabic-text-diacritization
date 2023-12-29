@@ -10,6 +10,8 @@ CONFIG = {
     "max_length": 500,
     # data loader params
     "num_workers": 2,
+    "eval_batch_size": 256,
+    "test_batch_size": 256,
     # Log params
     "log_base_path": "logs",
     "save_every": 1,  # save every x epochs

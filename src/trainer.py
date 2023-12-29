@@ -50,7 +50,7 @@ class Trainer:
         self.eval_iterator = get_dataloader(
             eval_set,
             params={
-                "batch_size": CONFIG["batch_size"],
+                "batch_size": CONFIG["eval_batch_size"],
                 "shuffle": False,
                 "num_workers": CONFIG["num_workers"],
             },

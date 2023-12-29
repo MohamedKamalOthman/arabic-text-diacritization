@@ -47,7 +47,7 @@ class Tester:
         test_iterator = get_dataloader(
             dataset=test_set,
             params={
-                "batch_size": CONFIG["batch_size"],
+                "batch_size": CONFIG["test_batch_size"],
                 "shuffle": False,
                 "num_workers": CONFIG["num_workers"],
             },
