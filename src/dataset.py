@@ -5,7 +5,7 @@ from encoder.arabic_encoder import ArabicEncoder
 from encoder.vocab import ARABIC_LETTERS
 
 
-class DiacritizerDataset(Dataset):
+class DiacritizedDataset(Dataset):
     def __init__(self, data, encoder: ArabicEncoder):
         self.data = data
         self.encoder = encoder
@@ -22,7 +22,7 @@ class DiacritizerDataset(Dataset):
         return chars_vector, diacritics_vector, text
 
 
-class InferenceDataset(Dataset):
+class UndiacritizedDataset(Dataset):
     def __init__(self, data, encoder: ArabicEncoder):
         self.data = data
         self.encoder = encoder
@@ -51,7 +51,7 @@ class InferenceDataset(Dataset):
         return chars_vector, char_indices
 
 
-def collate_infer(samples):
+def collate_undiacritized(samples):
     # sort batch by descending length to use with pack_padded_sequence
     samples = sorted(samples, key=lambda x: len(x[0]), reverse=True)
     char_seq, char_indices = zip(*samples)
@@ -71,7 +71,7 @@ def collate_infer(samples):
     return batch
 
 
-def collate_fn(samples):
+def collate_diacritized(samples):
     # sort batch by descending length to use with pack_padded_sequence
     samples = sorted(samples, key=lambda x: len(x[0]), reverse=True)
     char_seq, diac_seq, text = zip(*samples)
@@ -81,7 +81,7 @@ def collate_fn(samples):
     padded_char_seq = torch.zeros(len(char_seq), max(seq_lengths)).long()
     padded_diac_seq = torch.zeros(len(diac_seq), max(seq_lengths)).long()
     for i, (seq, diac) in enumerate(zip(char_seq, diac_seq)):
-        assert len(seq) == len(diac)
+        assert len(seq) == len(diac), f"{text[i]}, {i}, {seq}, {diac}"
         padded_char_seq[i, : seq_lengths[i]] = seq
         padded_diac_seq[i, : seq_lengths[i]] = diac
 
@@ -94,10 +94,10 @@ def collate_fn(samples):
     return batch
 
 
-def get_dataloader(dataset, params):
+def get_dataloader(dataset, params, diacritized=True):
     dataloader = DataLoader(
         dataset,
-        collate_fn=collate_fn,
+        collate_fn=collate_diacritized if diacritized else collate_undiacritized,
         **params,
     )
     return dataloader

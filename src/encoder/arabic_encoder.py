@@ -21,7 +21,7 @@ class ArabicEncoder:
         self.diac2idx = diacritics2id
         self.idx2diac = {idx: diac for diac, idx in self.diac2idx.items()}
 
-        self.valid_chars = set(self.diac2idx) | set(self.char2idx)
+        self.valid_chars = set(diacritics2id) | set(characters2id)
 
         # self.start_token_id = self.diac2idx[self.start]
         self.padding_token_id = self.char2idx[self.padding]
@@ -50,6 +50,9 @@ class ArabicEncoder:
         raise ValueError(f"{diacritics} list not known diacritic")
 
     def extract_diacritics(self, text: str):
+        if len(text) == 0:
+            return text, [], []
+
         current_diacritics = []
         diacritics = []
         chars = []

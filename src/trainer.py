@@ -7,7 +7,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from config import CONFIG
-from dataset import DiacritizerDataset, get_dataloader
+from dataset import DiacritizedDataset, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
 from models.loader import load_model
@@ -35,7 +35,7 @@ class Trainer:
         training_data = open(
             CONFIG["train_data_path"], "r", encoding="utf-8"
         ).readlines()
-        training_set = DiacritizerDataset(data=training_data, encoder=self.encoder)
+        training_set = DiacritizedDataset(data=training_data, encoder=self.encoder)
         self.train_iterator = get_dataloader(
             training_set,
             params={
@@ -46,7 +46,7 @@ class Trainer:
         )
 
         eval_data = open(CONFIG["val_data_path"], "r", encoding="utf-8").readlines()
-        eval_set = DiacritizerDataset(data=eval_data, encoder=self.encoder)
+        eval_set = DiacritizedDataset(data=eval_data, encoder=self.encoder)
         self.eval_iterator = get_dataloader(
             eval_set,
             params={
@@ -95,7 +95,8 @@ class Trainer:
         ) as file:
             file.write(json.dumps(CONFIG, indent=4))
 
-    def load(self, path: str = "cbhg", epoch: int = -1):
+    def load(self, path: str = "cbhg"):
+        epoch = CONFIG.get("load_epoch", -1)
         if self.model is None:
             raise ValueError("Model is not initialized")
         if self.optimizer is None:

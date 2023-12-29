@@ -4,11 +4,10 @@ import os
 from pathlib import Path
 
 import torch
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from config import CONFIG
-from dataset import InferenceDataset, collate_infer
+from dataset import UndiacritizedDataset, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
 from models.loader import load_model
 
@@ -24,13 +23,15 @@ def infer(input_file: str, output_directory: str, model_name: str):
 
     encoder = ArabicEncoder()
     inference_data = open(input_file, "r", encoding="utf-8").readlines()
-    inference_set = InferenceDataset(data=inference_data, encoder=encoder)
-    inference_iterator = DataLoader(
-        inference_set,
-        collate_fn=collate_infer,
-        batch_size=CONFIG["inference_batch_size"],
-        shuffle=False,
-        num_workers=CONFIG["num_workers"],
+    inference_set = UndiacritizedDataset(data=inference_data, encoder=encoder)
+    inference_iterator = get_dataloader(
+        dataset=inference_set,
+        params={
+            "batch_size": CONFIG["inference_batch_size"],
+            "shuffle": False,
+            "num_workers": CONFIG["num_workers"],
+        },
+        diacritized=False,
     )
     if torch.cuda.is_available():
         device = torch.device("cuda")
