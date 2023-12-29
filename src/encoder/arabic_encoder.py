@@ -1,6 +1,6 @@
 import re
 
-from encoder.vocab import CHARACTERS2ID, DIACRITICS2ID
+from encoder.vocab import CHARACTERS_LIST, DIACRITICS2ID
 
 
 class ArabicEncoder:
@@ -8,26 +8,29 @@ class ArabicEncoder:
 
     def __init__(
         self,
-        characters2id: dict[str, int] = CHARACTERS2ID,
+        characters_list: list[str] = CHARACTERS_LIST,
         diacritics2id: dict[str, int] = DIACRITICS2ID,
     ):
         self.padding = "x"
         self.start = "s"
+        # ensure that padding has id 0
+        char_and_pad_list = [self.padding] + characters_list
         # create dicionary mapping each character to its index and vice versa
-        self.char2idx = characters2id
-        self.char2idx.update({self.padding: len(self.char2idx)})
-        self.idx2char = {idx: char for idx, char in characters2id.items()}
+        self.char2idx = {char: idx for idx, char in enumerate(char_and_pad_list)}
+        self.idx2char = {idx: char for idx, char in enumerate(char_and_pad_list)}
         # create dicionary mapping each diacritic to its index and vice versa
         self.diac2idx = diacritics2id
         self.idx2diac = {idx: diac for diac, idx in self.diac2idx.items()}
 
-        self.valid_chars = set(diacritics2id) | set(characters2id)
+        self.valid_chars = set(diacritics2id) | set(characters_list)
 
         # self.start_token_id = self.diac2idx[self.start]
         self.padding_token_id = self.char2idx[self.padding]
 
         self.in_vocab_size = len(self.char2idx)
         self.out_vocab_size = len(self.diac2idx)
+
+        assert self.padding_token_id == 0
 
     def chars_to_vector(self, chars: list[str]) -> list[str]:
         return [self.char2idx[s] for s in chars if s != self.padding]

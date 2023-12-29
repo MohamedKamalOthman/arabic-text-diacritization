@@ -14,7 +14,7 @@ _characters_set = {
     "؛",
     "؟",
 } | ARABIC_LETTERS
-CHARACTERS2ID = {char: idx for idx, char in enumerate(sorted(_characters_set))}
+CHARACTERS_LIST = sorted(_characters_set)
 
 
 DIACRITICS2ID: dict[str, str] = pickle.load(

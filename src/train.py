@@ -1,7 +1,5 @@
 import argparse
 
-from traitlets import default
-
 from trainer import CBHGTrainer, RNNTrainer
 
 trainers = {"cbhg": CBHGTrainer, "rnn": RNNTrainer}

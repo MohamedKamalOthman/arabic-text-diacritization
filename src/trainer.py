@@ -192,10 +192,11 @@ class Trainer:
             for batch in self.eval_iterator:
                 char_seq = batch["char_seq"].to(self.device)
                 diac_seq = batch["diac_seq"].to(self.device)
+                seq_lengths = batch["seq_lengths"].to("cpu")
 
                 # forward pass
                 pred = (
-                    self.model(char_seq)
+                    self.model(char_seq, seq_lengths)
                     .contiguous()
                     .view(-1, self.encoder.out_vocab_size)
                 )
@@ -252,9 +253,13 @@ class RNNTrainer(Trainer):
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)
         diac_seq = batch["diac_seq"].to(self.device)
-        # seq_lengths = batch["seq_lengths"].to("cpu")
+        seq_lengths = batch["seq_lengths"].to("cpu")
         # forward pass
-        pred = self.model(char_seq).contiguous().view(-1, self.encoder.out_vocab_size)
+        pred = (
+            self.model(char_seq, seq_lengths)
+            .contiguous()
+            .view(-1, self.encoder.out_vocab_size)
+        )
 
         # get res
         gold = diac_seq.contiguous().view(-1)
