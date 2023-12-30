@@ -82,8 +82,11 @@ class CBHGModel(nn.Module):
         x = self.cbhg(x, lengths)
 
         x, (hn, cn) = self.LSTM(x)
-        x, _ = self.LSTM2(x, (hn, cn))
+        if self.use_batch_norm_post_lstm:
+            # ensure the batch norm is applied to the correct dimension
+            x = self.batch_norm(x.permute(0, 2, 1)).permute(0, 2, 1)
 
+        x, _ = self.LSTM2(x, (hn, cn))
         if self.use_batch_norm_post_lstm:
             # ensure the batch norm is applied to the correct dimension
             x = self.batch_norm(x.permute(0, 2, 1)).permute(0, 2, 1)
