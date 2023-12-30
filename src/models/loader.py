@@ -3,6 +3,7 @@ import torch
 from config import CONFIG
 from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
+from models.crnn import CRNNModel
 from models.rnn import RNNModel
 
 
@@ -14,6 +15,16 @@ def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
             embedding_dim=CONFIG["rnn_embedding_dim"],
             hidden_dim=CONFIG["rnn_hidden_dim"],
             num_layers=CONFIG["rnn_num_layers"],
+        )
+    elif model_name == "crnn":
+        return CRNNModel(
+            in_vocab_size=encoder.in_vocab_size,
+            out_vocab_size=encoder.out_vocab_size,
+            embedding_dim=CONFIG["rnn_embedding_dim"],
+            hidden_dim=CONFIG["rnn_hidden_dim"],
+            num_layers=CONFIG["rnn_num_layers"],
+            K=CONFIG["crnn_K"],
+            proj_dims=CONFIG["crnn_proj_dims"],
         )
     elif model_name == "cbhg":
         return CBHGModel(
