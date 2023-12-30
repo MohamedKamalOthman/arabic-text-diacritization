@@ -2,13 +2,19 @@ import torch.nn as nn
 
 
 class RNNModel(nn.Module):
-    def __init__(self, in_vocab_size, out_vocab_size, embedding_dim, hidden_dim):
+    def __init__(
+        self, in_vocab_size, out_vocab_size, embedding_dim, hidden_dim, num_layers
+    ):
         super(RNNModel, self).__init__()
 
         self.embedding = nn.Embedding(in_vocab_size, embedding_dim)
 
         self.rnn = nn.LSTM(
-            embedding_dim, hidden_dim, batch_first=True, bidirectional=True
+            embedding_dim,
+            hidden_dim,
+            batch_first=True,
+            bidirectional=True,
+            num_layers=num_layers,
         )
 
         # output projection

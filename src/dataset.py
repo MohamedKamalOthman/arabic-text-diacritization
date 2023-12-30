@@ -7,7 +7,11 @@ from encoder.vocab import ARABIC_LETTERS
 
 class DiacritizedDataset(Dataset):
     def __init__(self, data, encoder: ArabicEncoder):
-        self.data = data
+        self.data = []
+        for item in data:
+            item = encoder.clean(item)
+            if len(item) > 0:
+                self.data.append(item)
         self.encoder = encoder
 
     def __len__(self):
@@ -15,7 +19,6 @@ class DiacritizedDataset(Dataset):
 
     def __getitem__(self, index):
         item = self.data[index]
-        item = self.encoder.clean(item)
         text, chars, diacritics = self.encoder.extract_diacritics(item)
         chars_vector = torch.tensor(self.encoder.chars_to_vector(chars))
         diacritics_vector = torch.tensor(self.encoder.diac_to_vector(diacritics))
@@ -78,8 +81,9 @@ def collate_diacritized(samples):
 
     # pad sequences and extract lengths
     seq_lengths = [len(seq) for seq in char_seq]
-    padded_char_seq = torch.zeros(len(char_seq), max(seq_lengths)).long()
-    padded_diac_seq = torch.zeros(len(diac_seq), max(seq_lengths)).long()
+    max_seq_length = max(seq_lengths)
+    padded_char_seq = torch.zeros(len(char_seq), max_seq_length).long()
+    padded_diac_seq = torch.zeros(len(diac_seq), max_seq_length).long()
     for i, (seq, diac) in enumerate(zip(char_seq, diac_seq)):
         assert len(seq) == len(diac), f"{text[i]}, {i}, {seq}, {diac}"
         padded_char_seq[i, : seq_lengths[i]] = seq

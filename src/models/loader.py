@@ -13,6 +13,7 @@ def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
             out_vocab_size=encoder.out_vocab_size,
             embedding_dim=CONFIG["rnn_embedding_dim"],
             hidden_dim=CONFIG["rnn_hidden_dim"],
+            num_layers=CONFIG["rnn_num_layers"],
         )
     elif model_name == "cbhg":
         return CBHGModel(

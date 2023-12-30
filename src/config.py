@@ -1,7 +1,7 @@
 CONFIG = {
     "models": ["cbhg", "rnn"],
     # data params
-    "train_data_path": "../dataset/train.txt",
+    "train_data_path": "../dataset/train_split.txt",
     "val_data_path": "../dataset/val.txt",
     "test_data_directory": "../dataset/tests",
     "test_model_name": "rnn",
@@ -15,7 +15,7 @@ CONFIG = {
     # Log params
     "log_base_path": "logs",
     "save_every": 1,  # save every x epochs
-    "load_model": True,
+    "load_model": False,
     "load_epoch": -1,
     # model params
     "embedding_dim": 128,
@@ -30,14 +30,15 @@ CONFIG = {
     "prenet_dropout": 0.5,
     # training params
     "batch_size": 32,
-    "epochs": 3,
-    "eval_every": 1,  # eval every x epochs
+    "epochs": 10,
+    "eval_every": 2,  # eval every x epochs
     "learning_rate": 0.001,
     "adam_betas": (0.9, 0.999),
     "weight_decay": 1e-6,
     # RNN Model
     "rnn_embedding_dim": 256,
     "rnn_hidden_dim": 128,
+    "rnn_num_layers": 3,
     # inference params
     "inference_batch_size": 1,
 }
