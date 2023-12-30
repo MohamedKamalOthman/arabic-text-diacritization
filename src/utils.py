@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 
@@ -48,3 +49,19 @@ def batch_diac_error(
 
     # return number of true predictions, number of false predictions
     return correct.sum(), (correct.shape[0] - correct.sum())
+
+
+class LearningRateDecay:
+    def __init__(self, lr=0.002, warmup_steps=4000.0) -> None:
+        self.lr = lr
+        self.warmup_steps = warmup_steps
+
+    def __call__(self, global_step) -> float:
+        step = global_step + 1.0
+        lr = (
+            self.lr
+            * self.warmup_steps**0.5
+            * np.minimum(step * self.warmup_steps**-1.5, step**-0.5)
+        )
+
+        return lr
