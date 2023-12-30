@@ -7,7 +7,7 @@ from config import CONFIG
 from dataset import DiacritizedDataset, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
 from models.loader import load_model
-from utils import batch_accuracy
+from utils import batch_accuracy, batch_diac_error
 
 
 class Tester:
@@ -60,8 +60,10 @@ class Tester:
             desc=f"Testing {test_filename}: ",
         )
 
-        test_loss = 0
-        test_acc = 0
+        total_loss = 0
+        total_acc = 0
+        total_diac_corr = 0
+        total_diac_err = 0
         with torch.no_grad():
             for batch in test_iterator:
                 char_seq: torch.Tensor = batch["char_seq"].to(self.device)
@@ -81,16 +83,23 @@ class Tester:
                 # calculate loss
                 loss = self.criterion(pred, gold)
                 acc = batch_accuracy(pred, gold, self.encoder.padding_token_id)
-                test_loss += loss.item()
-                test_acc += acc.item()
+                diac_corr, diac_err = batch_diac_error(
+                    char_seq=char_seq,
+                    output=pred,
+                    gold=gold,
+                    arabic_ids=self.encoder.arabic_ids,
+                    device=self.device,
+                )
+                total_loss += loss.item()
+                total_acc += acc.item()
+                total_diac_corr += diac_corr.item()
+                total_diac_err += diac_err.item()
 
                 test_tqdm.update()
 
-        test_loss /= len(test_iterator)
-        test_acc /= len(test_iterator)
-        log_string = (
-            f"Testing {test_filename}: accuracy={test_acc:.6f}, loss={test_loss:.6f}"
-        )
+        total_acc /= len(test_iterator)
+        total_loss /= len(test_iterator)
+        log_string = f"Testing {test_filename}: accuracy={total_acc:.6f}, DER={total_diac_err/(total_diac_err+total_diac_corr):.6f}, loss={total_loss:.6f}"
         test_tqdm.set_description(log_string)
         self.log(log_string)
 
