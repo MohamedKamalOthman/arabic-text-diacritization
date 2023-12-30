@@ -16,7 +16,8 @@ _characters_set = {
 } | ARABIC_LETTERS
 CHARACTERS_LIST = sorted(_characters_set)
 
-
-DIACRITICS2ID: dict[str, str] = pickle.load(
-    open(_CURRENT_DIR / "diacritic2id.pickle", "rb")
-)
+DIACRITICS_CLASSES = pickle.load(open(_CURRENT_DIR / "diacritic2id.pickle", "rb"))
+# sort dict into list by value
+DIACRITICS_LIST: list[str] = [
+    k for k, v in sorted(DIACRITICS_CLASSES.items(), key=lambda item: item[1])
+]

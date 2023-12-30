@@ -5,7 +5,7 @@ CONFIG = {
     "val_data_path": "../dataset/val.txt",
     "test_data_directory": "../dataset/tests",
     "test_model_name": "rnn",
-    "test_model_path": "saved_models/5-rnn.pt",
+    "test_model_path": "saved_models/2-rnn.pt",
     "infer_model_path": "dataset/test.txt",
     "max_length": 500,
     # data loader params
@@ -15,11 +15,10 @@ CONFIG = {
     # Log params
     "log_base_path": "logs",
     "save_every": 1,  # save every x epochs
-    "load_model": False,
-    "load_epoch": 100,
+    "load_model": True,
+    "load_epoch": -1,
     # model params
     "embedding_dim": 128,
-    "prenet_dim": (128, 64),
     "cbhg_num_filters": 8,
     "cbhg_proj_dims": (64, 64),
     "cbhg_gru_hidden_size": 32,
@@ -31,7 +30,7 @@ CONFIG = {
     "prenet_dropout": 0.5,
     # training params
     "batch_size": 32,
-    "epochs": 5,
+    "epochs": 3,
     "eval_every": 1,  # eval every x epochs
     "learning_rate": 0.001,
     "adam_betas": (0.9, 0.999),

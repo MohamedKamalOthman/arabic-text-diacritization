@@ -12,7 +12,7 @@ from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
 from models.loader import load_model
 from models.rnn import RNNModel
-from utils import batch_accuracy
+from utils import batch_accuracy, batch_diac_error
 
 
 class Trainer:
@@ -185,8 +185,10 @@ class Trainer:
             leave=True,
             desc="Evaluate: ",
         )
-        epoch_loss = 0
-        epoch_acc = 0
+        total_loss = 0
+        total_acc = 0
+        total_diac_corr = 0
+        total_diac_err = 0
         self.model.eval()
         with torch.no_grad():
             for batch in self.eval_iterator:
@@ -207,17 +209,31 @@ class Trainer:
                 # calculate loss
                 loss = self.criterion(pred, gold)
                 acc = batch_accuracy(pred, gold, self.encoder.padding_token_id)
-                epoch_loss += loss.item()
-                epoch_acc += acc.item()
+                cor, err = batch_diac_error(
+                    char_seq,
+                    pred,
+                    gold,
+                    self.encoder.arabic_ids,
+                    device=self.device,
+                )
+                total_diac_corr += cor.item()
+                total_diac_err += err.item()
+                total_loss += loss.item()
+                total_acc += acc.item()
                 eval_tqdm.update()
 
         eval_tqdm.set_description(
-            f"Evaluate: loss: {epoch_loss/len(self.eval_iterator)}, accuracy: {epoch_acc/len(self.eval_iterator)}"
+            f"Evaluate: loss: {total_loss/len(self.eval_iterator)}, accuracy: {total_acc/len(self.eval_iterator)}, DER: {total_diac_err/(total_diac_err+total_diac_corr)}"
         )
         # save to log
         self.log(
             name="eval",
-            log_string=f"Epoch: {self.epoch}, Accuracy: {epoch_acc/len(self.eval_iterator)}, Loss: {epoch_loss/len(self.eval_iterator)}",
+            log_string=f"Epoch: {self.epoch}, Accuracy: {total_acc/len(self.eval_iterator)}, Loss: {total_loss/len(self.eval_iterator)}",
+        )
+
+        self.log(
+            name="eval",
+            log_string=f"Epoch: {self.epoch}, DER: {total_diac_err/(total_diac_err+total_diac_corr)}, error: {total_diac_err}, correct: {total_diac_corr}",
         )
 
         self.model.train()
