@@ -196,13 +196,14 @@ class Trainer:
         self.model.eval()
         with torch.no_grad():
             for batch in self.eval_iterator:
+                words_seq = batch["words_seq"].to(self.device)
                 char_seq = batch["char_seq"].to(self.device)
                 diac_seq = batch["diac_seq"].to(self.device)
                 seq_lengths = batch["seq_lengths"].to("cpu")
 
                 # forward pass
                 pred = (
-                    self.model(char_seq, seq_lengths)
+                    self.model((char_seq, words_seq), seq_lengths)
                     .contiguous()
                     .view(-1, self.encoder.out_vocab_size)
                 )

@@ -23,7 +23,8 @@ class RNNModel(nn.Module):
     def forward(self, x, seq_lengths=None):
         # print(x)
         if x[1] is not None:
-            x = torch.cat([self.embedding(x[0]), x[1]], dim=2)
+            # print()
+            x = torch.cat([self.embedding(x[0]), x[1]], dim=-1)
         else:
             x = self.embedding(x)
 

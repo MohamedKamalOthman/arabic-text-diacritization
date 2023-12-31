@@ -21,7 +21,7 @@ class DiacritizedWordDataset(Dataset):
         item = self.data[index]
         text, words, chars, diacritics = self.encoder.extract_diacritics_with_words(item)
         # print(np.array(words).shape, np.array(chars).shape)
-        words_vector = torch.tensor(self.encoder.words_to_vector(words))
+        words_vector = torch.tensor(np.array(self.encoder.words_to_vector(words)))
         chars_vector = torch.tensor(self.encoder.chars_to_vector(chars))
         diacritics_vector = torch.tensor(self.encoder.diac_to_vector(diacritics))
         return words_vector, chars_vector, diacritics_vector, text
