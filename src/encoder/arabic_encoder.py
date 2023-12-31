@@ -44,7 +44,7 @@ class ArabicEncoder:
         return [self.char2idx[s] for s in chars if s != self.padding]
 
     def words_to_vector(self, words: list[str]) -> list[str]:
-        return [self.word_embedding.wv.vocab[word] for word in words]
+        return [self.word_embedding.wv[word] for word in words]
 
     def diac_to_vector(self, diac: list[str]) -> list[str]:
         return [self.diac2idx[s] for s in diac if s != self.padding]
@@ -95,15 +95,16 @@ class ArabicEncoder:
         words = []
         split_text = text.split(" ")
         for word in split_text:
+            new_word = ""
             for char in word:
                 if char in self.diac2idx:
                     current_diacritics.append(char)
                 else:
                     diacritics.append(self.normalize_diacritic(current_diacritics))
                     chars.append(char)
-                    words.append(word)
+                    new_word += char
                     current_diacritics = []
-
+            words.append(new_word)
         
         if len(diacritics) > 0:
             diacritics.pop(0)

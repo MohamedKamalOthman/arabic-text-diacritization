@@ -30,7 +30,7 @@ CONFIG = {
     "prenet_dropout": 0.5,
     # training params
     "batch_size": 64,
-    "epochs": 40,
+    "epochs": 3,
     "eval_every": 1,  # eval every x epochs
     "learning_rate": 0.001,
     "adam_betas": (0.9, 0.999),
