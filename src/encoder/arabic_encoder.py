@@ -1,5 +1,6 @@
 import re
 import gensim
+import numpy as np
 
 from encoder.vocab import ARABIC_LETTERS, CHARACTERS_LIST, DIACRITICS_LIST
 
@@ -43,9 +44,17 @@ class ArabicEncoder:
     def chars_to_vector(self, chars: list[str]) -> list[str]:
         return [self.char2idx[s] for s in chars if s != self.padding]
 
-    def words_to_vector(self, words: list[str]) -> list[str]:
-        return [self.word_embedding.wv[word] for word in words]
-
+    def words_to_vector(self, words: list[str]):
+        vectors = []
+        for i in range(len(words)):
+            if words[i] in self.word_embedding.wv:
+                vectors.append(self.word_embedding.wv[words[i]])
+            else:
+                vectors.append(self.word_embedding.wv['مصر'])
+        vectors = np.array(vectors)
+        # print(vectors.shape)
+        return np.array(vectors)
+        
     def diac_to_vector(self, diac: list[str]) -> list[str]:
         return [self.diac2idx[s] for s in diac if s != self.padding]
 
