@@ -4,6 +4,7 @@ from config import CONFIG
 from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
 from models.rnn import RNNModel
+from models.rnncrf import RNNCRFModel
 
 
 def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
@@ -29,6 +30,14 @@ def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
             cbhg_gru_hidden_size=CONFIG["cbhg_gru_hidden_size"],
             lstm_hidden_dims=CONFIG["lstm_hidden_dims"],
             use_batch_norm_post_lstm=CONFIG["use_batch_norm_post_lstm"],
+        )
+    elif model_name == "rnncrf":
+        return RNNCRFModel(
+            in_vocab_size=encoder.in_vocab_size,
+            out_vocab_size=encoder.out_vocab_size,
+            embedding_dim=CONFIG["rnn_embedding_dim"],
+            hidden_dim=CONFIG["rnn_hidden_dim"],
+            num_layers=CONFIG["rnn_num_layers"],
         )
 
     raise ValueError(f"Unknown model {model_name}")

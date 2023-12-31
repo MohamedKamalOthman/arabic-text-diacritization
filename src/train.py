@@ -1,8 +1,8 @@
 import argparse
 
-from trainer import CBHGTrainer, RNNTrainer
+from trainer import CBHGTrainer, RNNCRFTrainer, RNNTrainer
 
-trainers = {"cbhg": CBHGTrainer, "rnn": RNNTrainer}
+trainers = {"cbhg": CBHGTrainer, "rnn": RNNTrainer, "rnncrf": RNNCRFTrainer}
 default_trainer = "rnn"
 
 

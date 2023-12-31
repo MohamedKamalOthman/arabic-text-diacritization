@@ -12,6 +12,7 @@ from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
 from models.loader import load_model
 from models.rnn import RNNModel
+from models.rnncrf import RNNCRFModel
 from utils import LearningRateDecay, batch_accuracy, batch_diac_error
 
 
@@ -157,6 +158,8 @@ class Trainer:
                 ).item()
                 loss.backward()
                 # TODO: implement gradient clipping
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+
                 self.optimizer.step()
 
                 self.step += 1
@@ -337,4 +340,51 @@ class CBHGTrainer(Trainer):
 
         # calculate loss
         loss = self.criterion(pred.to(self.device), gold.to(self.device))
+        return {"loss": loss, "pred": pred, "gold": gold}
+
+
+class RNNCRFTrainer(Trainer):
+    def __init__(self):
+        super(RNNCRFTrainer, self).__init__()
+
+        self.model: RNNCRFModel = load_model("rnncrf", self.encoder).to(self.device)
+
+        self.optimizer = optim.Adam(
+            self.model.parameters(),
+            lr=CONFIG["learning_rate"],
+            betas=CONFIG["adam_betas"],
+            weight_decay=CONFIG["weight_decay"],
+        )
+
+        # Load model if specified
+        if CONFIG["load_model"]:
+            self.load()
+
+    def log(self, name: str, log_string: str):
+        super(RNNCRFTrainer, self).log(name=name, log_string=log_string, path="rnncrf")
+
+    def load(self):
+        super(RNNCRFTrainer, self).load("rnncrf")
+
+    def save(self):
+        super(RNNCRFTrainer, self).save("rnncrf")
+
+    def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        char_seq = batch["char_seq"].to(self.device)
+        diac_seq = batch["diac_seq"].to(self.device)
+        seq_lengths = batch["seq_lengths"].to("cpu")
+        # get mask for padded elements
+        mask = char_seq != self.encoder.padding_token_id
+        loss = self.model(char_seq, diac_seq, seq_lengths, mask=mask)
+        # forward pass
+        pred = (
+            torch.tensor(self.model.decode(char_seq, seq_lengths))
+            .contiguous()
+            .view(-1)
+            .to(self.device)
+        )
+        pred = nn.functional.one_hot(
+            pred, num_classes=self.encoder.out_vocab_size
+        ).float()
+        gold = diac_seq.contiguous().view(-1).to(self.device)
         return {"loss": loss, "pred": pred, "gold": gold}
