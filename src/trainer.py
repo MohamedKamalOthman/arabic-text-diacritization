@@ -143,7 +143,7 @@ class Trainer:
         for epoch in range(self.epoch, CONFIG["epochs"]):
             self.epoch = epoch + 1
             for batch in self.train_iterator:
-                if CONFIG["use_decay"]:
+                if CONFIG["use_learning_decay"]:
                     self.lr = self.adjust_learning_rate(
                         self.optimizer, global_step=self.step
                     )
@@ -212,7 +212,9 @@ class Trainer:
 
                 # calculate loss
                 loss = self.criterion(pred, gold)
-                acc = batch_accuracy(pred, gold, self.encoder.padding_token_id)
+                acc = batch_accuracy(
+                    pred, gold, self.encoder.padding_token_id, device=self.device
+                )
                 cor, err = batch_diac_error(
                     char_seq,
                     pred,
@@ -254,10 +256,12 @@ class Trainer:
 
 
 class RNNTrainer(Trainer):
-    def __init__(self):
+    def __init__(self, model_name: str = "rnn"):
         super(RNNTrainer, self).__init__()
+        assert model_name == "rnn" or model_name == "crnn"
+        self.model_name = model_name
 
-        self.model: RNNModel = load_model("rnn", self.encoder).to(self.device)
+        self.model: RNNModel = load_model(model_name, self.encoder).to(self.device)
 
         self.optimizer = optim.Adam(
             self.model.parameters(),
@@ -271,13 +275,15 @@ class RNNTrainer(Trainer):
             self.load()
 
     def log(self, name: str, log_string: str):
-        super(RNNTrainer, self).log(name=name, log_string=log_string, path="rnn")
+        super(RNNTrainer, self).log(
+            name=name, log_string=log_string, path=self.model_name
+        )
 
     def load(self):
-        super(RNNTrainer, self).load("rnn")
+        super(RNNTrainer, self).load(self.model_name)
 
     def save(self):
-        super(RNNTrainer, self).save("rnn")
+        super(RNNTrainer, self).save(self.model_name)
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         char_seq = batch["char_seq"].to(self.device)

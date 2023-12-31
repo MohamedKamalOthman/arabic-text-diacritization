@@ -2,12 +2,21 @@ import argparse
 
 from trainer import CBHGTrainer, RNNCRFTrainer, RNNTrainer
 
-trainers = {"cbhg": CBHGTrainer, "rnn": RNNTrainer, "rnncrf": RNNCRFTrainer}
+trainers = {
+    "cbhg": CBHGTrainer,
+    "rnn": RNNTrainer,
+    "crnn": RNNTrainer,
+    "rnncrf": RNNCRFTrainer,
+}
 default_trainer = "rnn"
 
 
 def train(model: str = default_trainer):
-    trainer = trainers[model]()
+    trainer = trainers[model]
+    if trainer == RNNTrainer:
+        trainer = trainer(model_name=model)
+    else:
+        trainer = trainer()
     trainer.train()
 
 
