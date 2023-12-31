@@ -7,7 +7,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from config import CONFIG
-from dataset import DiacritizedDataset, get_dataloader
+from dataset import DiacritizedDataset, DiacritizedWordDataset, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
 from models.loader import load_model
@@ -35,9 +35,10 @@ class Trainer:
         training_data = open(
             CONFIG["train_data_path"], "r", encoding="utf-8"
         ).readlines()
-        training_set = DiacritizedDataset(data=training_data, encoder=self.encoder)
+        training_set = DiacritizedWordDataset(data=training_data, encoder=self.encoder)
         self.train_iterator = get_dataloader(
             training_set,
+            with_words=True,
             params={
                 "batch_size": CONFIG["batch_size"],
                 "shuffle": True,
@@ -46,9 +47,10 @@ class Trainer:
         )
 
         eval_data = open(CONFIG["val_data_path"], "r", encoding="utf-8").readlines()
-        eval_set = DiacritizedDataset(data=eval_data, encoder=self.encoder)
+        eval_set = DiacritizedWordDataset(data=eval_data, encoder=self.encoder)
         self.eval_iterator = get_dataloader(
             eval_set,
+            with_words=True,
             params={
                 "batch_size": CONFIG["eval_batch_size"],
                 "shuffle": False,
@@ -284,9 +286,13 @@ class RNNTrainer(Trainer):
         char_seq = batch["char_seq"].to(self.device)
         diac_seq = batch["diac_seq"].to(self.device)
         seq_lengths = batch["seq_lengths"].to("cpu")
+        if batch["words_seq"] is not None:
+            words_seq = batch["words_seq"].to(self.device)
+        else:
+            words_seq = None
         # forward pass
         pred = (
-            self.model(char_seq, seq_lengths)
+            self.model((char_seq, words_seq), seq_lengths)
             .contiguous()
             .view(-1, self.encoder.out_vocab_size)
         )

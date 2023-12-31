@@ -1,4 +1,5 @@
 import re
+import gensim
 
 from encoder.vocab import ARABIC_LETTERS, CHARACTERS_LIST, DIACRITICS_LIST
 
@@ -11,6 +12,8 @@ class ArabicEncoder:
         characters_list: list[str] = CHARACTERS_LIST,
         diacritics_list: list[str] = DIACRITICS_LIST,
     ):
+        # self.word_embedding = gensim.models.Word2Vec.load('full_grams_cbow_300_twitter.mdl')
+        self.word_embedding = gensim.models.Word2Vec.load()
         self.padding = "x"
         # self.start = "s"
         # ensure that padding has id 0
@@ -39,6 +42,9 @@ class ArabicEncoder:
 
     def chars_to_vector(self, chars: list[str]) -> list[str]:
         return [self.char2idx[s] for s in chars if s != self.padding]
+
+    def words_to_vector(self, words: list[str]) -> list[str]:
+        return [self.word_embedding.wv.vocab[word] for word in words]
 
     def diac_to_vector(self, diac: list[str]) -> list[str]:
         return [self.diac2idx[s] for s in diac if s != self.padding]
@@ -78,6 +84,33 @@ class ArabicEncoder:
         diacritics.append(self.normalize_diacritic(current_diacritics))
 
         return text, chars, diacritics
+
+    def extract_diacritics_with_words(self, text: str):
+        if len(text) == 0:
+            return text, [], [], []
+
+        current_diacritics = []
+        diacritics = []
+        chars = []
+        words = []
+        split_text = text.split(" ")
+        for word in split_text:
+            for char in word:
+                if char in self.diac2idx:
+                    current_diacritics.append(char)
+                else:
+                    diacritics.append(self.normalize_diacritic(current_diacritics))
+                    chars.append(char)
+                    words.append(word)
+                    current_diacritics = []
+
+        
+        if len(diacritics) > 0:
+            diacritics.pop(0)
+
+        diacritics.append(self.normalize_diacritic(current_diacritics))
+
+        return text, words, chars, diacritics
 
     def combine_chars_diac(self, chars: list[str], diac: list[str]) -> list[str]:
         output = ""

@@ -21,7 +21,11 @@ class RNNModel(nn.Module):
         self.linear = nn.Linear(hidden_dim * 2, out_vocab_size)
 
     def forward(self, x, seq_lengths=None):
-        x = self.embedding(x)
+        # print(x)
+        if x[1] is not None:
+            x = self.embedding(x[0]) 
+        else:
+            x = self.embedding(x)
 
         if seq_lengths is not None:
             x = nn.utils.rnn.pack_padded_sequence(x, seq_lengths, batch_first=True)
