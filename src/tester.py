@@ -2,7 +2,7 @@ import os
 
 import torch
 from tqdm import tqdm
-
+import torch.nn as nn
 from config import CONFIG
 from dataset import DiacritizedDataset, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
@@ -72,10 +72,14 @@ class Tester:
 
                 # forward pass
                 pred = (
-                    self.model(char_seq, seq_lengths)
+                    torch.tensor(self.model.decode(char_seq, seq_lengths))
                     .contiguous()
-                    .view(-1, self.encoder.out_vocab_size)
+                    .view(-1)
+                    .to(self.device)
                 )
+                pred = nn.functional.one_hot(
+                    pred, num_classes=self.encoder.out_vocab_size
+                ).float()
 
                 # get res
                 gold = diac_seq.contiguous().view(-1).to(self.device)

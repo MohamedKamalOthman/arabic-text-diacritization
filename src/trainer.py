@@ -153,9 +153,7 @@ class Trainer:
                 # get training loss
                 loss = result["loss"]
                 # get training batch accuracy
-                acc = batch_accuracy(
-                    result["pred"], result["gold"], self.encoder.padding_token_id
-                ).item()
+                acc = 0
                 loss.backward()
                 # TODO: implement gradient clipping
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
@@ -383,14 +381,16 @@ class RNNCRFTrainer(Trainer):
         mask = char_seq != self.encoder.padding_token_id
         loss = self.model(char_seq, diac_seq, seq_lengths, mask=mask)
         # forward pass
-        pred = (
-            torch.tensor(self.model.decode(char_seq, seq_lengths))
-            .contiguous()
-            .view(-1)
-            .to(self.device)
-        )
-        pred = nn.functional.one_hot(
-            pred, num_classes=self.encoder.out_vocab_size
-        ).float()
-        gold = diac_seq.contiguous().view(-1).to(self.device)
+        # pred = (
+        #     torch.tensor(self.model.decode(char_seq, seq_lengths))
+        #     .contiguous()
+        #     .view(-1)
+        #     .to(self.device)
+        # )
+        # pred = nn.functional.one_hot(
+        #     pred, num_classes=self.encoder.out_vocab_size
+        # ).float()
+        # gold = diac_seq.contiguous().view(-1).to(self.device)
+        gold = []
+        pred = []
         return {"loss": loss, "pred": pred, "gold": gold}
