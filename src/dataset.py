@@ -136,29 +136,39 @@ def collate_undiacritized_with_words(samples):
     return batch
 
 def collate_diacritized_with_words(samples):
+    # print(np.array(samples[0]).shape)
     # sort batch by descending length to use with pack_padded_sequence
     samples = sorted(samples, key=lambda x: len(x[1]), reverse=True)
     words_seq, char_seq, diac_seq, text = zip(*samples)
     # words_seq =  torch.tensor(words_seq)
-    # print(words_seq[0].shape)
-    # print(char_seq[0].shape)
-    
     # pad sequences and extract lengths
     seq_lengths = [len(seq) for seq in char_seq]
     max_seq_length = max(seq_lengths)
+
+    padded_words_seq = torch.zeros(len(words_seq), max_seq_length, 100).long()
     padded_char_seq = torch.zeros(len(char_seq), max_seq_length).long()
     padded_diac_seq = torch.zeros(len(diac_seq), max_seq_length).long()
     for i, (seq, diac, word) in enumerate(zip(char_seq, diac_seq, words_seq)):
         assert len(seq) == len(diac), f"{text[i]}, {i}, {seq}, {diac}, {word}"
         padded_char_seq[i, : seq_lengths[i]] = seq
         padded_diac_seq[i, : seq_lengths[i]] = diac
-
-    print(padded_char_seq.shape)
-    print(padded_diac_seq.shape)
-    print(len(words_seq))
+        padded_words_seq[i, : seq_lengths[i]] = word
+    # for i, word in enumerate(words_seq):
+    #     for _ in range(len(word), max_seq_length):
+    #         word = torch.cat([word, torch.tensor(np.zeros((1, 100)))])
+        
+    # for i, word in enumerate(words_seq):
+    #     if word.size(0) == max_seq_length:
+    #         continue
+    #     words_seq[i] = torch.cat([word, torch.zeros(max_seq_length - word.size(0), 100)])
     
+    # print(padded_char_seq[0].size())
+    # print(padded_words_seq[0].size())
+    # print(padded_char_seq[1].size())
+    # print(padded_words_seq[1].size())
+
     batch = {
-        "words_seq": torch.tensor(words_seq),
+        "words_seq": padded_words_seq,
         "char_seq": padded_char_seq,
         "diac_seq": padded_diac_seq,
         "seq_lengths": torch.LongTensor(seq_lengths),
@@ -167,21 +177,21 @@ def collate_diacritized_with_words(samples):
     return batch
 
 def get_dataloader(dataset, params, diacritized=True, with_words=False):
-    collate_fn = None
+    collate_fn_s = None
     if diacritized:
         if with_words:
-            collate_fn = collate_diacritized_with_words
+            collate_fn_s = collate_diacritized_with_words
         else:
-            collate_fn = collate_diacritized
+            collate_fn_s = collate_diacritized
     else:
         if with_words:
-            collate_fn = collate_undiacritized_with_words
+            collate_fn_s = collate_undiacritized_with_words
         else:
-            collate_fn = collate_undiacritized
+            collate_fn_s = collate_undiacritized
 
     dataloader = DataLoader(
         dataset,
-        collate_fn = collate_fn,
+        collate_fn = collate_fn_s,
         **params,
     )
     return dataloader

@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch
 
 class RNNModel(nn.Module):
     def __init__(
@@ -10,7 +10,7 @@ class RNNModel(nn.Module):
         self.embedding = nn.Embedding(in_vocab_size, embedding_dim)
 
         self.rnn = nn.LSTM(
-            embedding_dim,
+            embedding_dim + 100,
             hidden_dim,
             batch_first=True,
             bidirectional=True,
@@ -23,7 +23,7 @@ class RNNModel(nn.Module):
     def forward(self, x, seq_lengths=None):
         # print(x)
         if x[1] is not None:
-            x = self.embedding(x[0]).append(x[1])
+            x = torch.cat([self.embedding(x[0]), x[1]], dim=2)
         else:
             x = self.embedding(x)
 

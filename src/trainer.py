@@ -35,6 +35,7 @@ class Trainer:
         training_data = open(
             CONFIG["train_data_path"], "r", encoding="utf-8"
         ).readlines()
+
         training_set = DiacritizedWordDataset(data=training_data, encoder=self.encoder)
         self.train_iterator = get_dataloader(
             training_set,
@@ -283,6 +284,8 @@ class RNNTrainer(Trainer):
         super(RNNTrainer, self).save(self.model_name)
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        # print(batch)
+        # exit()
         char_seq = batch["char_seq"].to(self.device)
         diac_seq = batch["diac_seq"].to(self.device)
         seq_lengths = batch["seq_lengths"].to("cpu")

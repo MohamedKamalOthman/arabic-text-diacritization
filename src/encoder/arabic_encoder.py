@@ -1,6 +1,5 @@
 import re
 import gensim
-import numpy as np
 
 from encoder.vocab import ARABIC_LETTERS, CHARACTERS_LIST, DIACRITICS_LIST
 
@@ -13,7 +12,7 @@ class ArabicEncoder:
         characters_list: list[str] = CHARACTERS_LIST,
         diacritics_list: list[str] = DIACRITICS_LIST,
     ):
-        self.word_embedding = gensim.models.Word2Vec.load('full_grams_cbow_100_twitter.mdl')
+        self.word_embedding = gensim.models.Word2Vec.load('./encoder/full_grams_cbow_100_twitter.mdl')
         # self.word_embedding = gensim.models.Word2Vec.load()
         self.padding = "x"
         # self.start = "s"
@@ -44,16 +43,16 @@ class ArabicEncoder:
     def chars_to_vector(self, chars: list[str]) -> list[str]:
         return [self.char2idx[s] for s in chars if s != self.padding]
 
-    def words_to_vector(self, words: list[str]):
-        vectors = []
+    def words_to_vector(self, words: list[str]) -> list[str]:
+        count = 0
         for i in range(len(words)):
             if words[i] in self.word_embedding.wv:
-                vectors.append(self.word_embedding.wv[words[i]])
+                words[i] = self.word_embedding.wv[words[i]]
             else:
-                vectors.append(self.word_embedding.wv['مصر'])
-        vectors = np.array(vectors)
-        # print(vectors.shape)
-        return np.array(vectors)
+                count += 1
+                words[i] = self.word_embedding.wv['مصر']
+        # print(count * 100 / len(words))
+        return words
         
     def diac_to_vector(self, diac: list[str]) -> list[str]:
         return [self.diac2idx[s] for s in diac if s != self.padding]
@@ -94,6 +93,13 @@ class ArabicEncoder:
 
         return text, chars, diacritics
 
+    def remove_diacritics(self, text: str):
+        result = ""
+        for char in text:
+            if char not in self.diac2idx:
+                result += char
+        return result
+    
     def extract_diacritics_with_words(self, text: str):
         if len(text) == 0:
             return text, [], [], []
@@ -104,21 +110,21 @@ class ArabicEncoder:
         words = []
         split_text = text.split(" ")
         for word in split_text:
-            new_word = ""
+            new_word = self.remove_diacritics(word)
             for char in word:
                 if char in self.diac2idx:
                     current_diacritics.append(char)
                 else:
                     diacritics.append(self.normalize_diacritic(current_diacritics))
                     chars.append(char)
-                    new_word += char
+                    words.append(new_word)
                     current_diacritics = []
-            words.append(new_word)
         
         if len(diacritics) > 0:
             diacritics.pop(0)
 
         diacritics.append(self.normalize_diacritic(current_diacritics))
+        # print(len(words), len(chars), len(diacritics))
 
         return text, words, chars, diacritics
 
