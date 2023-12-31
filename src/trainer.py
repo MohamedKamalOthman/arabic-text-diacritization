@@ -7,7 +7,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from config import CONFIG
-from dataset import DiacritizedDataset, get_dataloader
+from dataset import DiacritizedDataset, DiacritizedDatasetWithFeatures, get_dataloader
 from encoder.arabic_encoder import ArabicEncoder
 from models.cbhg import CBHGModel
 from models.loader import load_model
@@ -36,7 +36,9 @@ class Trainer:
         training_data = open(
             CONFIG["train_data_path"], "r", encoding="utf-8"
         ).readlines()
-        training_set = DiacritizedDataset(data=training_data, encoder=self.encoder)
+        training_set = DiacritizedDatasetWithFeatures(
+            data=training_data, encoder=self.encoder
+        )
         self.train_iterator = get_dataloader(
             training_set,
             params={
@@ -47,7 +49,7 @@ class Trainer:
         )
 
         eval_data = open(CONFIG["val_data_path"], "r", encoding="utf-8").readlines()
-        eval_set = DiacritizedDataset(data=eval_data, encoder=self.encoder)
+        eval_set = DiacritizedDatasetWithFeatures(data=eval_data, encoder=self.encoder)
         self.eval_iterator = get_dataloader(
             eval_set,
             params={
@@ -196,13 +198,13 @@ class Trainer:
         self.model.eval()
         with torch.no_grad():
             for batch in self.eval_iterator:
-                char_seq = batch["char_seq"].to(self.device)
+                feature_seq = batch["feature_seq"].to(self.device)
                 diac_seq = batch["diac_seq"].to(self.device)
                 seq_lengths = batch["seq_lengths"].to("cpu")
 
                 # forward pass
                 pred = (
-                    self.model(char_seq, seq_lengths)
+                    self.model(feature_seq, seq_lengths)
                     .contiguous()
                     .view(-1, self.encoder.out_vocab_size)
                 )
@@ -216,7 +218,7 @@ class Trainer:
                     pred, gold, self.encoder.padding_token_id, device=self.device
                 )
                 cor, err = batch_diac_error(
-                    char_seq,
+                    feature_seq,
                     pred,
                     gold,
                     self.encoder.arabic_ids,
@@ -286,12 +288,12 @@ class RNNTrainer(Trainer):
         super(RNNTrainer, self).save(self.model_name)
 
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        char_seq = batch["char_seq"].to(self.device)
+        feature_seq = batch["feature_seq"].to(self.device)
         diac_seq = batch["diac_seq"].to(self.device)
         seq_lengths = batch["seq_lengths"].to("cpu")
         # forward pass
         pred = (
-            self.model(char_seq, seq_lengths)
+            self.model(feature_seq, seq_lengths)
             .contiguous()
             .view(-1, self.encoder.out_vocab_size)
         )

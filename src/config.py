@@ -17,7 +17,7 @@ CONFIG = {
     "log_base_path": "logs",
     "save_every": 1,  # save every x epochs
     "load_model": True,
-    "load_epoch": 8,
+    "load_epoch": -1,
     # training params
     "batch_size": 32,
     "epochs": 35,
@@ -40,7 +40,7 @@ CONFIG = {
     # RNN Model
     "rnn_embedding_dim": 256,
     "rnn_hidden_dim": 256,
-    "rnn_num_layers": 4,
+    "rnn_num_layers": 1,
     # CRNN Model
     "crnn_embedding_dim": 128,
     "crnn_num_filters": 16,
