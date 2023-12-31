@@ -12,7 +12,7 @@ class ArabicEncoder:
         characters_list: list[str] = CHARACTERS_LIST,
         diacritics_list: list[str] = DIACRITICS_LIST,
     ):
-        self.word_embedding = gensim.models.Word2Vec.load('full_grams_cbow_300_twitter.mdl')
+        self.word_embedding = gensim.models.Word2Vec.load('full_grams_cbow_100_twitter.mdl')
         # self.word_embedding = gensim.models.Word2Vec.load()
         self.padding = "x"
         # self.start = "s"
