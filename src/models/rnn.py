@@ -23,7 +23,7 @@ class RNNModel(nn.Module):
     def forward(self, x, seq_lengths=None):
         # print(x)
         if x[1] is not None:
-            x = self.embedding(x[0]) 
+            x = self.embedding(x[0]).append(x[1])
         else:
             x = self.embedding(x)
 
