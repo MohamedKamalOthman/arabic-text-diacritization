@@ -142,7 +142,7 @@ class Trainer:
         for epoch in range(self.epoch, CONFIG["epochs"]):
             self.epoch = epoch + 1
             for batch in self.train_iterator:
-                if CONFIG["use_decay"]:
+                if CONFIG["use_learning_decay"]:
                     self.lr = self.adjust_learning_rate(
                         self.optimizer, global_step=self.step
                     )
@@ -209,7 +209,9 @@ class Trainer:
 
                 # calculate loss
                 loss = self.criterion(pred, gold)
-                acc = batch_accuracy(pred, gold, self.encoder.padding_token_id)
+                acc = batch_accuracy(
+                    pred, gold, self.encoder.padding_token_id, device=self.device
+                )
                 cor, err = batch_diac_error(
                     char_seq,
                     pred,

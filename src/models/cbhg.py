@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from modules.cbhg import CBHGModule
@@ -66,7 +67,8 @@ class CBHGModel(nn.Module):
 
         # post CBHG batch norm
         if self.use_batch_norm_post_lstm:
-            self.batch_norm = nn.BatchNorm1d(lstm_hidden_dims[-1] * 2)
+            self.batch_norm1 = nn.BatchNorm1d(lstm_hidden_dims[0] * 2)
+            self.batch_norm2 = nn.BatchNorm1d(lstm_hidden_dims[1] * 2)
 
         # output projection
         self.linear = nn.Linear(lstm_hidden_dims[1] * 2, out_vocab_size)
@@ -81,15 +83,18 @@ class CBHGModel(nn.Module):
 
         x = self.cbhg(x, lengths)
 
+        hn = torch.zeros((2, 2, 2))
+        cn = torch.zeros((2, 2, 2))
+
         x, (hn, cn) = self.LSTM(x)
         if self.use_batch_norm_post_lstm:
             # ensure the batch norm is applied to the correct dimension
-            x = self.batch_norm(x.permute(0, 2, 1)).permute(0, 2, 1)
+            x = self.batch_norm1(x.permute(0, 2, 1)).permute(0, 2, 1)
 
-        x, _ = self.LSTM2(x, (hn, cn))
+        x, (hn, cn) = self.LSTM2(x, (hn, cn))
         if self.use_batch_norm_post_lstm:
             # ensure the batch norm is applied to the correct dimension
-            x = self.batch_norm(x.permute(0, 2, 1)).permute(0, 2, 1)
+            x = self.batch_norm2(x.permute(0, 2, 1)).permute(0, 2, 1)
 
         x = self.linear(x)
         return x

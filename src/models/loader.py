@@ -20,17 +20,17 @@ def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
         return CRNNModel(
             in_vocab_size=encoder.in_vocab_size,
             out_vocab_size=encoder.out_vocab_size,
-            embedding_dim=CONFIG["rnn_embedding_dim"],
-            hidden_dim=CONFIG["rnn_hidden_dim"],
-            num_layers=CONFIG["rnn_num_layers"],
-            K=CONFIG["crnn_K"],
+            embedding_dim=CONFIG["crnn_embedding_dim"],
+            hidden_dim=CONFIG["crnn_hidden_dim"],
+            num_layers=CONFIG["crnn_num_layers"],
+            K=CONFIG["crnn_num_filters"],
             proj_dims=CONFIG["crnn_proj_dims"],
         )
     elif model_name == "cbhg":
         return CBHGModel(
             in_vocab_size=encoder.in_vocab_size,
             out_vocab_size=encoder.out_vocab_size,
-            embedding_dim=CONFIG["embedding_dim"],
+            embedding_dim=CONFIG["cbhg_embedding_dim"],
             use_prenet=CONFIG["use_prenet"],
             prenet_dims=CONFIG["prenet_dims"],
             prenet_dropout=CONFIG["prenet_dropout"],

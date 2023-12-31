@@ -26,6 +26,7 @@ class BatchNormConv1d(nn.Module):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
+            bias=False,
         )
         self.activation = activation
         self.bn = nn.BatchNorm1d(out_channels)
