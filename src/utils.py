@@ -1,4 +1,5 @@
-import numpy as np
+from math import sqrt
+
 import torch
 
 from config import CONFIG
@@ -53,18 +54,8 @@ def batch_diac_error(
     return correct.sum(), (correct.shape[0] - correct.sum())
 
 
-class LearningRateDecay:
-    def __init__(self, lr=0.002, warmup_steps=4000.0) -> None:
-        self.lr = lr
-        self.warmup_steps = warmup_steps
+def decay_lr(lr: float, step: int) -> float:
+    step = step + 1 - CONFIG["batch_size"] / 32
+    decayed_lr = lr * 4000.0**0.5 * min(step * 4000.0**-1.5, sqrt(step))
 
-    def __call__(self, global_step) -> float:
-        step = global_step + 1.0
-        step *= CONFIG["batch_size"] / 32
-        lr = (
-            self.lr
-            * self.warmup_steps**0.5
-            * np.minimum(step * self.warmup_steps**-1.5, step**-0.5)
-        )
-
-        return lr
+    return decayed_lr

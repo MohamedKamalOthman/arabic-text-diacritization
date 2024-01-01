@@ -13,7 +13,7 @@ from models.cbhg import CBHGModel
 from models.loader import load_model
 from models.rnn import RNNModel
 from models.rnncrf import RNNCRFModel
-from utils import LearningRateDecay, batch_accuracy, batch_diac_error
+from utils import batch_accuracy, batch_diac_error, decay_lr
 
 
 class Trainer:
@@ -144,9 +144,7 @@ class Trainer:
             self.epoch = epoch + 1
             for batch in self.train_iterator:
                 if CONFIG["use_learning_decay"]:
-                    self.lr = self.adjust_learning_rate(
-                        self.optimizer, global_step=self.step
-                    )
+                    self.lr = self.update_lr(self.step)
 
                 self.optimizer.zero_grad()
                 result = self.training_step(batch)
@@ -245,14 +243,11 @@ class Trainer:
         self.model.train()
         eval_tqdm.close()
 
-    def get_learning_rate(self):
-        return LearningRateDecay(lr=CONFIG["learning_rate"])
-
-    def adjust_learning_rate(self, optimizer, global_step):
-        learning_rate = self.get_learning_rate()(global_step=global_step)
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = learning_rate
-        return learning_rate
+    def update_lr(self, step):
+        new_lr = decay_lr(CONFIG["learning_rate"], step)
+        for param_group in self.optimizer.param_groups:
+            param_group["lr"] = new_lr
+        return new_lr
 
 
 class RNNTrainer(Trainer):
