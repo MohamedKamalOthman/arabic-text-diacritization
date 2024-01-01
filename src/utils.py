@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 
+from config import CONFIG
+
 
 def batch_accuracy(
     output: torch.Tensor, gold: torch.Tensor, pad_index: int = -1, device="cuda"
@@ -58,6 +60,7 @@ class LearningRateDecay:
 
     def __call__(self, global_step) -> float:
         step = global_step + 1.0
+        step *= CONFIG["batch_size"] / 32
         lr = (
             self.lr
             * self.warmup_steps**0.5

@@ -43,9 +43,12 @@ class ArabicEncoder:
     def diac_to_vector(self, diac: list[str]) -> list[str]:
         return [self.diac2idx[s] for s in diac if s != self.padding]
 
-    def clean(self, text: str):
+    def clean(self, text: str, remove_spaces: bool = True):
         text = "".join([c for c in text if c in self.valid_chars])
-        return re.sub(r"\s+", " ", text).strip()
+        if remove_spaces:
+            text = re.sub(r"\s+", " ", text).strip()
+
+        return text
 
     def normalize_diacritic(self, diacritics: list[str]):
         reverse_diacritic = "".join(reversed(diacritics))
