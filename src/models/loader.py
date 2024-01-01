@@ -6,6 +6,7 @@ from models.cbhg import CBHGModel
 from models.crnn import CRNNModel
 from models.rnn import RNNModel
 from models.rnncrf import RNNCRFModel
+from models.transformer import TransformerModel
 
 
 def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
@@ -49,6 +50,15 @@ def load_model(model_name: str, encoder: ArabicEncoder) -> torch.nn.Module:
             embedding_dim=CONFIG["rnn_embedding_dim"],
             hidden_dim=CONFIG["rnn_hidden_dim"],
             num_layers=CONFIG["rnn_num_layers"],
+        )
+    elif model_name == "transformer":
+        return TransformerModel(
+            input_size=encoder.in_vocab_size,
+            output_size=encoder.out_vocab_size,
+            # max_seq_length=CONFIG["transformer_max_seq_length"],
+            # num_heads=CONFIG["transformer_num_heads"],
+            # hidden_size=CONFIG["transformer_hidden_size"],
+            # num_layers=CONFIG["transformer_num_layers"],
         )
 
     raise ValueError(f"Unknown model {model_name}")
