@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch
 from modules.cbhg import CBHGModule
 from modules.prenet import PrenetModule
 
@@ -34,14 +34,14 @@ class CBHGModel(nn.Module):
         # prenet
         if self.use_prenet:
             self.prenet = PrenetModule(
-                in_dim=embedding_dim,
+                in_dim=embedding_dim + 100,
                 hidden_dim=prenet_dims,
                 dropout=prenet_dropout,
             )
 
         # CBHG
         self.cbhg = CBHGModule(
-            in_dim=embedding_dim if not self.use_prenet else prenet_dims[-1],
+            in_dim = embedding_dim + 100 if not self.use_prenet else prenet_dims[-1],
             out_dim=cbhg_gru_hidden_size,
             K=cbhg_num_filters,
             proj_dims=cbhg_proj_dims,
@@ -74,7 +74,11 @@ class CBHGModel(nn.Module):
     def forward(self, x, lengths=None):
         # x: (batch_size, seq_len)
         # lengths: (batch_size, )
-        x = self.embedding(x)
+        if x[1] is not None:
+            # print()
+            x = torch.cat([self.embedding(x[0]), x[1]], dim=-1)
+        else:
+            x = self.embedding(x)
 
         if self.use_prenet:
             x = self.prenet(x)
