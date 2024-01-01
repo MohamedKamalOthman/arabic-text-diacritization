@@ -55,6 +55,52 @@ class UndiacritizedDataset(Dataset):
         return chars_vector, char_indices
 
 
+class DiacritizerDataset(Dataset):
+    def __init__(self, data, encoder: ArabicEncoder):
+        self.data = data
+        self.encoder = encoder
+        self.indices: list[list[int]] = []
+        for i in range(len(data)):
+            chars_idx = []
+            for j, char in enumerate(data[i]):
+                if char in self.encoder.char2idx:
+                    chars_idx.append(j)
+
+            self.indices.append(chars_idx)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index: int):
+        txt = self.data[index]
+        chars = self.encoder.clean(txt, remove_spaces=False)
+        _, chars, _ = self.encoder.extract_diacritics(chars)
+        chars_vector = torch.tensor(self.encoder.chars_to_vector(chars))
+        char_indices = self.indices[index]
+
+        return chars_vector, char_indices, txt
+
+
+def collate_diacritizer(samples):
+    # sort batch by descending length to use with pack_padded_sequence
+    # samples = sorted(samples, key=lambda x: len(x[0]), reverse=True)
+    char_seq, char_indices, text = zip(*samples)
+
+    # pad sequences and extract lengths
+    seq_lengths = [len(seq) for seq in char_seq]
+    max_seq_length = max(seq_lengths)
+    padded_char_seq = torch.zeros(len(char_seq), max_seq_length).long()
+    for i, seq in enumerate(char_seq):
+        padded_char_seq[i, : seq_lengths[i]] = seq
+
+    batch = {
+        "char_seq": padded_char_seq,
+        "char_indices": char_indices,
+        "txt": text,
+    }
+    return batch
+
+
 def collate_undiacritized(samples):
     # sort batch by descending length to use with pack_padded_sequence
     samples = sorted(samples, key=lambda x: len(x[0]), reverse=True)

@@ -1,37 +1,26 @@
 import argparse
-import csv
-import os
-from pathlib import Path
 
 import torch
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from config import CONFIG
-from dataset import UndiacritizedDataset, get_dataloader
+from dataset import DiacritizerDataset, collate_diacritizer
 from encoder.arabic_encoder import ArabicEncoder
+from encoder.vocab import ARABIC_LETTERS
 from models.loader import load_model
 
-_models = ["cbhg", "rnn"]
-_default_model = "rnn"
 
-
-def infer(input_file: str, output_directory: str, model_name: str):
-    # create directory if not exists
-    os.makedirs(output_directory, exist_ok=True)
-
-    output_directory = Path(output_directory)
-
+def diacritize(input_file: str, output_file: str, model_path: str, model_name: str):
     encoder = ArabicEncoder()
     inference_data = open(input_file, "r", encoding="utf-8").readlines()
-    inference_set = UndiacritizedDataset(data=inference_data, encoder=encoder)
-    inference_iterator = get_dataloader(
+    inference_set = DiacritizerDataset(data=inference_data, encoder=encoder)
+    inference_iterator = DataLoader(
         dataset=inference_set,
-        params={
-            "batch_size": CONFIG["inference_batch_size"],
-            "shuffle": False,
-            "num_workers": CONFIG["num_workers"],
-        },
-        diacritized=False,
+        batch_size=CONFIG["inference_batch_size"],
+        shuffle=False,
+        num_workers=CONFIG["num_workers"],
+        collate_fn=collate_diacritizer,
     )
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -40,38 +29,36 @@ def infer(input_file: str, output_directory: str, model_name: str):
         device = torch.device("cpu")
     model = load_model(model_name, encoder).to(device)
     saved_model = torch.load(
-        f"{input_file}.pt",
+        model_path,
         map_location=device,
     )
     model.load_state_dict(saved_model["model_state_dict"])
-    with open(output_directory / f"{input_file}.csv", "w") as output_file:
-        csv_writer = csv.writer(output_file, lineterminator="\n")
-        csv_writer.writerow(["ID", "label"])
-        infer_tqdm = tqdm(
-            iterable=inference_iterator,
+    with open(output_file, "w", encoding="utf-8") as of:
+        diacritize_tqdm = tqdm(
+            inference_iterator,
+            desc="Diacritizing",
             total=len(inference_iterator),
-            leave=True,
-            desc="Infering: ",
+            unit="batch",
         )
+        for batch in diacritize_tqdm:
+            char_seq = batch["char_seq"].to(device)
+            char_indices = batch["char_indices"]
+            texts_list = batch["txt"]
+            texts_list = [list(text) for text in texts_list]
+            # insert diacritics in text
+            with torch.no_grad():
+                diac_seq = model(char_seq, None)
+                # get max
+                diac_seq = torch.argmax(diac_seq, dim=-1)
 
-        model.eval()
-        with torch.no_grad():
-            for batch in infer_tqdm:
-                char_seq: torch.Tensor = batch["char_seq"].to(device)
-                indices: list[list[int]] = batch["char_indices"]
-                # forward pass
-                preds = model(char_seq).contiguous().argmax(dim=-1).cpu().numpy()
+            for i, text in enumerate(texts_list):
+                for j, char_idx in enumerate(char_indices[i]):
+                    if text[char_idx] in ARABIC_LETTERS:
+                        text[char_idx] += encoder.idx2diac[diac_seq[i][j].item()]
 
-                # save to file
-                result = []
-                for i in range(len(indices)):
-                    for j in range(len(indices[i])):
-                        if indices[i][j] != -1:
-                            result.append([indices[i][j], preds[i][j]])
-                result = sorted(result)
-                csv_writer.writerows(result)
-
-        infer_tqdm.close()
+            for i, text in enumerate(texts_list):
+                diacritized_text = "".join(text)
+                of.write(diacritized_text)
 
 
 if __name__ == "__main__":
@@ -87,12 +74,20 @@ if __name__ == "__main__":
         help="Path to output directory",
     )
     parser.add_argument(
-        "--model",
+        "model_path",
         type=str,
-        choices=_models,
-        default=_default_model,
         help="Model to use",
+    )
+    parser.add_argument(
+        "model_name",
+        type=str,
+        help="Model name",
     )
     args = parser.parse_args()
 
-    infer(input_file=args.input, output_directory=args.output, model_name=args.model)
+    diacritize(
+        input_file=args.input,
+        output_file=args.output,
+        model_path=args.model_path,
+        model_name=args.model_name,
+    )
