@@ -3,7 +3,9 @@ import csv
 
 
 def compare_csv(file1, file2):
-    with open(file1, "r") as f1, open(file2, "r") as f2:
+    with open(file1, "r", encoding="utf-8") as f1, open(
+        file2, "r", encoding="utf-8"
+    ) as f2:
         reader1 = csv.reader(f1)
         reader2 = csv.reader(f2)
 

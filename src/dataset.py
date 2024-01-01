@@ -33,10 +33,11 @@ class UndiacritizedDataset(Dataset):
         self.indices: list[list[int]] = []
         for i in range(len(data)):
             data[i] = self.encoder.clean(data[i])
-            seq = data[i]
+            text, chars, diacritics = self.encoder.extract_diacritics(data[i])
+            data[i] = chars
             self.indices.append([])
             chars_idx = self.indices[-1]
-            for char in seq:
+            for char in chars:
                 if char in ARABIC_LETTERS:
                     chars_idx.append(current_idx)
                     current_idx += 1
